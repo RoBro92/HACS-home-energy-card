@@ -11,8 +11,6 @@ import {
   setupBackgroundKey,
   stateValue,
   timeOfDay,
-  weatherIcon,
-  weatherTreatment,
 } from "../energy-home-visual-card.js";
 
 const hass = {
@@ -30,7 +28,6 @@ const hass = {
     "input_boolean.has_solar": { state: "on" },
     "input_boolean.has_battery": { state: "off" },
     "sun.sun": { state: "above_horizon" },
-    "weather.home": { state: "partlycloudy", attributes: { temperature: 17.8 } },
   },
 };
 
@@ -94,7 +91,6 @@ test("buildEnergyModel derives display values, directions, background, and visib
         ev_power: "sensor.ev_power_w",
         battery_power: "sensor.battery_power_w",
         battery_soc: "sensor.battery_soc",
-        weather: "weather.home",
       },
       energy_today: {
         grid: "sensor.grid_energy_today",
@@ -118,18 +114,24 @@ test("buildEnergyModel derives display values, directions, background, and visib
   assert.equal(model.battery.status, "discharging");
   assert.equal(model.battery.socLabel, "86%");
   assert.equal(model.energyToday.solar, "21.6 kWh");
-  assert.equal(model.weather.temperatureLabel, "18 C");
+  assert.equal(Object.hasOwn(model, "weather"), false);
 });
 
 test("selectBackground prefers setup and time-specific background variants", () => {
   const config = {
     backgrounds: {
       full: { day: "/local/full-day.jpg", night: "/local/full-night.jpg" },
+      ev_solar: { day: "/local/ev-solar-day.jpg", night: "/local/ev-solar-night.jpg" },
+      ev_battery: { day: "/local/ev-battery-day.jpg", night: "/local/ev-battery-night.jpg" },
+      solar_battery: { day: "/local/solar-battery-day.jpg", night: "/local/solar-battery-night.jpg" },
       no_ev: { day: "/local/no-ev-day.jpg", night: "/local/no-ev-night.jpg" },
       no_solar_battery: {
         day: "/local/no-solar-battery-day.jpg",
         night: "/local/no-solar-battery-night.jpg",
       },
+      ev_only: { day: "/local/ev-only-day.jpg", night: "/local/ev-only-night.jpg" },
+      solar_only: { day: "/local/solar-only-day.jpg", night: "/local/solar-only-night.jpg" },
+      battery_only: { day: "/local/battery-only-day.jpg", night: "/local/battery-only-night.jpg" },
       base: {
         day: "/local/base-day.jpg",
         night: "/local/base-night.jpg",
@@ -138,29 +140,16 @@ test("selectBackground prefers setup and time-specific background variants", () 
   };
 
   assert.equal(setupBackgroundKey({ ev: true, solar: true, battery: true }), "full");
-  assert.equal(setupBackgroundKey({ ev: false, solar: true, battery: true }), "no_ev");
-  assert.equal(setupBackgroundKey({ ev: true, solar: false, battery: false }), "no_solar_battery");
+  assert.equal(setupBackgroundKey({ ev: true, solar: true, battery: false }), "ev_solar");
+  assert.equal(setupBackgroundKey({ ev: true, solar: false, battery: true }), "ev_battery");
+  assert.equal(setupBackgroundKey({ ev: false, solar: true, battery: true }), "solar_battery");
+  assert.equal(setupBackgroundKey({ ev: true, solar: false, battery: false }), "ev_only");
+  assert.equal(setupBackgroundKey({ ev: false, solar: true, battery: false }), "solar_only");
+  assert.equal(setupBackgroundKey({ ev: false, solar: false, battery: true }), "battery_only");
   assert.equal(setupBackgroundKey({ ev: false, solar: false, battery: false }), "base");
-  assert.equal(selectBackground(config, { ev: false, solar: true, battery: true }, "day"), "/local/no-ev-day.jpg");
-  assert.equal(
-    selectBackground(config, { ev: true, solar: false, battery: false }, "night"),
-    "/local/no-solar-battery-night.jpg",
-  );
+  assert.equal(selectBackground(config, { ev: false, solar: true, battery: true }, "day"), "/local/solar-battery-day.jpg");
+  assert.equal(selectBackground(config, { ev: true, solar: false, battery: false }, "night"), "/local/ev-only-night.jpg");
   assert.equal(selectBackground(config, { ev: false, solar: false, battery: false }, "day"), "/local/base-day.jpg");
-  assert.equal(
-    selectBackground({ backgrounds: { full: { day: { rain: "/local/full-day-rain.jpg" } } } }, { ev: true, solar: true, battery: true }, "day", "rain"),
-    "/local/full-day-rain.jpg",
-  );
-});
-
-test("weatherIcon maps common Home Assistant weather states to mdi icons", () => {
-  assert.equal(weatherIcon("partlycloudy"), "mdi:weather-partly-cloudy");
-  assert.equal(weatherIcon("rainy"), "mdi:weather-rainy");
-  assert.equal(weatherIcon("unknown-state"), "mdi:weather-partly-cloudy");
-  assert.equal(weatherTreatment("rainy"), "rain");
-  assert.equal(weatherTreatment("lightning"), "storm");
-  assert.equal(weatherTreatment("snowy"), "snow");
-  assert.equal(weatherTreatment("fog"), "fog");
 });
 
 test("buildEnergyModel reverses EV flow when an EV sensor reports discharge power", () => {

@@ -94,39 +94,6 @@ export function flowSpeedSeconds(value) {
   return Number(Math.max(1.2, Math.min(8, seconds)).toFixed(2));
 }
 
-export function weatherIcon(condition) {
-  const icons = {
-    clear: "mdi:weather-sunny",
-    "clear-night": "mdi:weather-night",
-    cloudy: "mdi:weather-cloudy",
-    exceptional: "mdi:alert-circle-outline",
-    fog: "mdi:weather-fog",
-    hail: "mdi:weather-hail",
-    lightning: "mdi:weather-lightning",
-    "lightning-rainy": "mdi:weather-lightning-rainy",
-    partlycloudy: "mdi:weather-partly-cloudy",
-    pouring: "mdi:weather-pouring",
-    rainy: "mdi:weather-rainy",
-    snowy: "mdi:weather-snowy",
-    "snowy-rainy": "mdi:weather-snowy-rainy",
-    sunny: "mdi:weather-sunny",
-    windy: "mdi:weather-windy",
-    "windy-variant": "mdi:weather-windy-variant",
-  };
-  return icons[String(condition || "").toLowerCase()] || "mdi:weather-partly-cloudy";
-}
-
-export function weatherTreatment(condition) {
-  const value = String(condition || "").toLowerCase();
-  if (["rainy", "pouring", "lightning-rainy"].includes(value)) return "rain";
-  if (["lightning", "exceptional"].includes(value)) return "storm";
-  if (["snowy", "snowy-rainy", "hail"].includes(value)) return "snow";
-  if (["fog"].includes(value)) return "fog";
-  if (["cloudy", "partlycloudy", "windy", "windy-variant"].includes(value)) return "cloud";
-  if (["clear", "sunny", "clear-night"].includes(value)) return "clear";
-  return "cloud";
-}
-
 export function timeOfDay(config = {}, hass, now = new Date()) {
   const configured = config.time_of_day ?? config.timeOfDay;
   if (configured) {
@@ -149,48 +116,51 @@ export function timeOfDay(config = {}, hass, now = new Date()) {
 }
 
 export function setupBackgroundKey(visible) {
+  if (visible.ev && visible.solar && visible.battery) return "full";
+  if (visible.ev && visible.solar && !visible.battery) return "ev_solar";
+  if (visible.ev && !visible.solar && visible.battery) return "ev_battery";
+  if (!visible.ev && visible.solar && visible.battery) return "solar_battery";
+  if (visible.ev && !visible.solar && !visible.battery) return "ev_only";
+  if (!visible.ev && visible.solar && !visible.battery) return "solar_only";
+  if (!visible.ev && !visible.solar && visible.battery) return "battery_only";
   if (!visible.ev && !visible.solar && !visible.battery) return "base";
-  if (!visible.solar && !visible.battery) return "no_solar_battery";
-  if (!visible.ev) return "no_ev";
   return "full";
 }
 
-function readBackgroundValue(entry, mode, treatment) {
+function readBackgroundValue(entry, mode) {
   if (!entry) return null;
   if (typeof entry === "string") return entry;
   const modeEntry = entry[mode];
   if (modeEntry && typeof modeEntry === "object") {
-    return modeEntry[treatment] || modeEntry.default || null;
+    return modeEntry.default || null;
   }
-  return entry[`${mode}_${treatment}`] || modeEntry || entry.default || null;
+  return modeEntry || entry.default || null;
 }
 
-export function selectBackground(config = {}, visible = {}, mode = "night", treatment = "cloud") {
+export function selectBackground(config = {}, visible = {}, mode = "night") {
   const backgrounds = config.backgrounds || {};
   const setupKey = setupBackgroundKey(visible);
   const aliases = {
     full: ["full", "default"],
-    no_ev: ["no_ev", "noEv"],
-    no_solar_battery: ["no_solar_battery", "noSolarBattery", "no_solar_no_battery", "noSolarNoBattery"],
+    ev_solar: ["ev_solar", "evSolar"],
+    ev_battery: ["ev_battery", "evBattery"],
+    solar_battery: ["solar_battery", "solarBattery", "no_ev", "noEv"],
+    ev_only: ["ev_only", "evOnly", "no_solar_battery", "noSolarBattery", "no_solar_no_battery", "noSolarNoBattery"],
+    solar_only: ["solar_only", "solarOnly"],
+    battery_only: ["battery_only", "batteryOnly"],
     base: ["base", "home_only", "homeOnly", "no_ev_solar_battery", "noEvSolarBattery"],
   };
 
   for (const key of aliases[setupKey] || [setupKey]) {
-    const value = readBackgroundValue(backgrounds[key], mode, treatment);
+    const value = readBackgroundValue(backgrounds[key], mode);
     if (value) return value;
   }
 
-  if (setupKey === "no_ev" && config.background_no_ev) return config.background_no_ev;
+  if (setupKey === "solar_battery" && config.background_no_ev) return config.background_no_ev;
   if (setupKey === "full" && config.background_full) return config.background_full;
   if (config.background_full) return config.background_full;
   if (config.background_no_ev) return config.background_no_ev;
-  return setupKey === "no_ev" ? DEFAULT_BACKGROUND_NO_EV : DEFAULT_BACKGROUND_FULL;
-}
-
-function roundTemperature(value) {
-  const parsed = parseNumber(value);
-  if (parsed === null) return "-";
-  return `${Math.round(parsed)} C`;
+  return setupKey === "solar_battery" ? DEFAULT_BACKGROUND_NO_EV : DEFAULT_BACKGROUND_FULL;
 }
 
 function statusFromPower(value, positiveStatus, negativeStatus, idleStatus = "idle") {
@@ -226,11 +196,7 @@ export function buildEnergyModel(config = {}, hass) {
   const evWatts = parseNumber(stateValue(hass, entities.ev_power)) ?? 0;
   const batteryWatts = parseNumber(stateValue(hass, entities.battery_power)) ?? 0;
   const batterySoc = stateValue(hass, entities.battery_soc);
-  const weatherEntity = entities.weather || config.weather;
-  const weatherState = stateValue(hass, weatherEntity);
-  const weatherAttributes = stateAttributes(hass, weatherEntity);
   const mode = timeOfDay(config, hass, config.now ? new Date(config.now) : new Date());
-  const treatment = weatherTreatment(weatherState);
   const visible = {
     ev: showEv,
     solar: showSolar,
@@ -240,7 +206,7 @@ export function buildEnergyModel(config = {}, hass) {
   const model = {
     title: config.title || "Energy Flow",
     subtitle: config.subtitle || "Live home power",
-    background: selectBackground(config, visible, mode, treatment),
+    background: selectBackground(config, visible, mode),
     mode,
     entities,
     visible,
@@ -274,13 +240,6 @@ export function buildEnergyModel(config = {}, hass) {
       grid: formatEnergy(stateValue(hass, energyToday.grid)),
       solar: formatEnergy(stateValue(hass, energyToday.solar)),
       home: formatEnergy(stateValue(hass, energyToday.home)),
-    },
-    weather: {
-      entity: weatherEntity,
-      condition: weatherState,
-      icon: weatherIcon(weatherState),
-      treatment,
-      temperatureLabel: roundTemperature(weatherAttributes.temperature),
     },
     flows: [],
   };
@@ -386,58 +345,6 @@ class EnergyHomeVisualCard extends LitElement {
       filter: saturate(1.08) contrast(1.06);
     }
 
-    .weather-layer {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      pointer-events: none;
-      opacity: .72;
-      transition: opacity .6s ease, background .6s ease;
-    }
-
-    .weather-clear {
-      opacity: .18;
-      background: linear-gradient(180deg, rgba(255, 222, 120, .16), transparent 44%);
-    }
-
-    .weather-cloud {
-      background:
-        linear-gradient(180deg, rgba(145, 171, 190, .18), transparent 58%),
-        radial-gradient(ellipse at 48% 0%, rgba(190, 215, 230, .16), transparent 34%);
-    }
-
-    .weather-rain {
-      background:
-        repeating-linear-gradient(105deg, rgba(155, 215, 255, .22) 0 1px, transparent 1px 17px),
-        linear-gradient(180deg, rgba(75, 125, 170, .22), rgba(0, 0, 0, .12));
-      animation: rain 1.1s linear infinite;
-    }
-
-    .weather-storm {
-      background:
-        radial-gradient(circle at 78% 9%, rgba(160, 205, 255, .34), transparent 18%),
-        repeating-linear-gradient(106deg, rgba(155, 215, 255, .24) 0 1px, transparent 1px 15px),
-        linear-gradient(180deg, rgba(20, 36, 58, .45), rgba(0, 0, 0, .18));
-      animation: rain .9s linear infinite, storm-pulse 4.8s ease-in-out infinite;
-    }
-
-    .weather-snow {
-      background:
-        radial-gradient(circle at 8% 12%, rgba(255, 255, 255, .30) 0 1px, transparent 2px),
-        radial-gradient(circle at 38% 22%, rgba(255, 255, 255, .28) 0 1px, transparent 2px),
-        radial-gradient(circle at 68% 8%, rgba(255, 255, 255, .30) 0 1px, transparent 2px),
-        linear-gradient(180deg, rgba(190, 225, 255, .18), transparent 58%);
-      background-size: 90px 120px, 130px 160px, 110px 150px, auto;
-      animation: snow 8s linear infinite;
-    }
-
-    .weather-fog {
-      background:
-        linear-gradient(180deg, rgba(200, 220, 225, .18), rgba(200, 220, 225, .08) 54%, transparent),
-        repeating-linear-gradient(0deg, rgba(220, 235, 240, .10) 0 2px, transparent 2px 26px);
-      filter: blur(.2px);
-    }
-
     .mode-day .scene {
       filter: saturate(1.02) contrast(1.02);
     }
@@ -446,30 +353,6 @@ class EnergyHomeVisualCard extends LitElement {
       background:
         linear-gradient(100deg, rgba(45, 156, 255, .05), transparent 34%),
         radial-gradient(circle at 76% 14%, rgba(255, 222, 145, .10), transparent 24%);
-    }
-
-    @keyframes rain {
-      to {
-        background-position: 0 44px, 0 0;
-      }
-    }
-
-    @keyframes snow {
-      to {
-        background-position: 10px 120px, -20px 160px, 18px 150px, 0 0;
-      }
-    }
-
-    @keyframes storm-pulse {
-      0%, 78%, 100% {
-        opacity: .74;
-      }
-      80% {
-        opacity: .96;
-      }
-      82% {
-        opacity: .62;
-      }
     }
 
     .atmosphere {
@@ -493,14 +376,13 @@ class EnergyHomeVisualCard extends LitElement {
 
     .topbar {
       display: grid;
-      grid-template-columns: minmax(190px, 1fr) auto auto;
+      grid-template-columns: minmax(190px, 1fr) auto;
       gap: clamp(12px, 2vw, 28px);
       align-items: start;
     }
 
     .eyebrow,
     .summary-label,
-    .weather-condition,
     .node-label,
     .pill-label {
       color: var(--energy-card-muted);
@@ -548,38 +430,6 @@ class EnergyHomeVisualCard extends LitElement {
       font-size: clamp(15px, 1.5vw, 22px);
       font-weight: 650;
       white-space: nowrap;
-    }
-
-    .weather {
-      display: grid;
-      grid-template-columns: auto auto;
-      gap: 10px;
-      align-items: center;
-      justify-content: end;
-      padding: 10px 12px;
-      min-width: 110px;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, .18);
-      background: rgba(3, 12, 18, .48);
-      backdrop-filter: blur(16px);
-    }
-
-    .weather ha-icon {
-      color: var(--energy-card-gold);
-      filter: drop-shadow(0 0 14px rgba(255, 209, 90, .55));
-    }
-
-    .weather-temp {
-      font-size: clamp(18px, 1.7vw, 26px);
-      font-weight: 650;
-      line-height: 1;
-      white-space: nowrap;
-    }
-
-    .weather-condition {
-      margin-top: 4px;
-      font-size: 9px;
-      text-align: right;
     }
 
     .mid {
@@ -774,10 +624,6 @@ class EnergyHomeVisualCard extends LitElement {
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
 
-      .weather {
-        justify-self: start;
-      }
-
       .statusbar {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
@@ -832,9 +678,8 @@ class EnergyHomeVisualCard extends LitElement {
     this._model = model;
 
     return html`
-      <ha-card class="mode-${model.mode} weather-${model.weather.treatment}" style="--energy-background: url('${model.background}')">
+      <ha-card class="mode-${model.mode}" style="--energy-background: url('${model.background}')">
         <div class="scene"></div>
-        <div class="weather-layer weather-${model.weather.treatment}"></div>
         <div class="atmosphere"></div>
         <div class="content">
           ${this.renderTopbar(model)}
@@ -876,13 +721,6 @@ class EnergyHomeVisualCard extends LitElement {
           ${model.visible.solar ? this.renderSummaryItem("Solar", model.energyToday.solar) : html``}
           ${this.renderSummaryItem("Home", model.energyToday.home)}
         </div>
-        <button class="weather" type="button" @click=${() => this.openMoreInfo(model.weather.entity)}>
-          <ha-icon icon=${model.weather.icon}></ha-icon>
-          <span>
-            <span class="weather-temp">${model.weather.temperatureLabel}</span>
-            <span class="weather-condition">${model.weather.condition}</span>
-          </span>
-        </button>
       </div>
     `;
   }

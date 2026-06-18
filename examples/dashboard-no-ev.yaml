@@ -5,12 +5,24 @@ backgrounds:
   full:
     day: /local/energy-bg-full-day.png
     night: /local/energy-bg-full-night.png
-  no_ev:
+  ev_solar:
+    day: /local/energy-bg-ev-solar-day.png
+    night: /local/energy-bg-ev-solar-night.png
+  ev_battery:
+    day: /local/energy-bg-ev-battery-day.png
+    night: /local/energy-bg-ev-battery-night.png
+  solar_battery:
     day: /local/energy-bg-no-ev-day.png
     night: /local/energy-bg-no-ev-night.png
-  no_solar_battery:
+  ev_only:
     day: /local/energy-bg-no-solar-battery-day.png
     night: /local/energy-bg-no-solar-battery-night.png
+  solar_only:
+    day: /local/energy-bg-solar-only-day.png
+    night: /local/energy-bg-solar-only-night.png
+  battery_only:
+    day: /local/energy-bg-battery-only-day.png
+    night: /local/energy-bg-battery-only-night.png
   base:
     day: /local/energy-bg-base-day.png
     night: /local/energy-bg-base-night.png
@@ -26,7 +38,6 @@ entities:
   house_power: sensor.house_consumption_w
   battery_power: sensor.battery_power_w
   battery_soc: sensor.battery_soc
-  weather: weather.home
 
 energy_today:
   grid: sensor.grid_energy_today

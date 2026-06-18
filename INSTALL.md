@@ -13,10 +13,18 @@
    ```text
    /config/www/energy-bg-full-day.png
    /config/www/energy-bg-full-night.png
+   /config/www/energy-bg-ev-solar-day.png
+   /config/www/energy-bg-ev-solar-night.png
+   /config/www/energy-bg-ev-battery-day.png
+   /config/www/energy-bg-ev-battery-night.png
    /config/www/energy-bg-no-ev-day.png
    /config/www/energy-bg-no-ev-night.png
    /config/www/energy-bg-no-solar-battery-day.png
    /config/www/energy-bg-no-solar-battery-night.png
+   /config/www/energy-bg-solar-only-day.png
+   /config/www/energy-bg-solar-only-night.png
+   /config/www/energy-bg-battery-only-day.png
+   /config/www/energy-bg-battery-only-night.png
    /config/www/energy-bg-base-day.png
    /config/www/energy-bg-base-night.png
    ```
@@ -47,10 +55,18 @@ The card can use a setup-aware background matrix:
 
 - `/local/energy-bg-full-day.png`
 - `/local/energy-bg-full-night.png`
+- `/local/energy-bg-ev-solar-day.png`
+- `/local/energy-bg-ev-solar-night.png`
+- `/local/energy-bg-ev-battery-day.png`
+- `/local/energy-bg-ev-battery-night.png`
 - `/local/energy-bg-no-ev-day.png`
 - `/local/energy-bg-no-ev-night.png`
 - `/local/energy-bg-no-solar-battery-day.png`
 - `/local/energy-bg-no-solar-battery-night.png`
+- `/local/energy-bg-solar-only-day.png`
+- `/local/energy-bg-solar-only-night.png`
+- `/local/energy-bg-battery-only-day.png`
+- `/local/energy-bg-battery-only-night.png`
 - `/local/energy-bg-base-day.png`
 - `/local/energy-bg-base-night.png`
 
