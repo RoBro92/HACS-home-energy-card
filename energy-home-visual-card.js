@@ -544,7 +544,7 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .node-battery {
-      top: 47%;
+      top: 58%;
       left: 65%;
       color: #dbfff6;
     }
