@@ -271,7 +271,7 @@ export function buildEnergyModel(config = {}, hass) {
         "battery",
         batteryWatts,
         batteryWatts >= 0 ? "charging" : "discharging",
-        "M 40 43 C 31 46, 26 47, 16 46",
+        "M 43 42 C 51 44, 58 45, 66 43",
         "#56f0d0",
       ),
     );
@@ -544,8 +544,8 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .node-battery {
-      left: 8%;
-      bottom: 21%;
+      top: 47%;
+      left: 65%;
       color: #dbfff6;
     }
 
