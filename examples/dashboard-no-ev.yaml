@@ -1,0 +1,21 @@
+type: custom:energy-home-visual-card
+title: Energy Flow
+subtitle: Live home power
+background_full: /local/energy-bg-full.jpg
+background_no_ev: /local/energy-bg-no-ev.jpg
+
+show_ev: false
+show_battery: true
+
+entities:
+  grid_power: sensor.grid_power_w
+  solar_power: sensor.solar_power_w
+  house_power: sensor.house_consumption_w
+  battery_power: sensor.battery_power_w
+  battery_soc: sensor.battery_soc
+  weather: weather.home
+
+energy_today:
+  grid: sensor.grid_energy_today
+  solar: sensor.solar_energy_today
+  home: sensor.home_energy_today

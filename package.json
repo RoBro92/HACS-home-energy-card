@@ -1,0 +1,16 @@
+{
+  "name": "energy-home-visual-card",
+  "version": "0.1.0",
+  "description": "A cinematic Home Assistant Lovelace energy flow card.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "home-assistant",
+    "lovelace",
+    "custom-card",
+    "energy"
+  ],
+  "license": "MIT"
+}
