@@ -43,6 +43,7 @@
 
       .controls {
         display: flex;
+        flex-wrap: wrap;
         gap: 8px;
         align-items: center;
         justify-content: center;
@@ -73,7 +74,10 @@
     </main>
     <div class="controls" aria-label="Preview toggles">
       <button id="evToggle" type="button" aria-pressed="true">EV visible</button>
+      <button id="solarToggle" type="button" aria-pressed="true">Solar visible</button>
       <button id="batteryToggle" type="button" aria-pressed="true">Battery visible</button>
+      <button id="timeToggle" type="button" aria-pressed="false">Night mode</button>
+      <button id="weatherToggle" type="button">Weather: cloudy</button>
     </div>
 
     <script type="module">
@@ -106,7 +110,10 @@
             "mdi:home-battery": "▰",
             "mdi:weather-partly-cloudy": "◐",
             "mdi:weather-sunny": "☀",
-            "mdi:weather-rainy": "☂"
+            "mdi:weather-rainy": "☂",
+            "mdi:weather-lightning": "ϟ",
+            "mdi:weather-snowy": "*",
+            "mdi:weather-fog": "≋"
           };
           const glyph = icons[this.getAttribute("icon")] || "•";
           this.shadowRoot || this.attachShadow({ mode: "open" });
@@ -129,23 +136,47 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../energy-home-visual-card.js?v=preview-2");
+      await import("../energy-home-visual-card.js?v=preview-5");
 
       const card = document.querySelector("energy-home-visual-card");
       const evToggle = document.querySelector("#evToggle");
+      const solarToggle = document.querySelector("#solarToggle");
       const batteryToggle = document.querySelector("#batteryToggle");
+      const timeToggle = document.querySelector("#timeToggle");
+      const weatherToggle = document.querySelector("#weatherToggle");
+      const weatherStates = ["partlycloudy", "rainy", "lightning", "fog", "sunny"];
       const state = {
         showEv: true,
+        showSolar: true,
         showBattery: true,
+        isDay: false,
+        weatherIndex: 0,
         phase: 0
       };
 
       card.setConfig({
         title: "Energy Flow",
         subtitle: "Live home power",
-        background_full: "./assets/energy-bg-full-preview.png",
-        background_no_ev: "./assets/energy-bg-full-preview.png",
+        backgrounds: {
+          full: {
+            day: "./assets/energy-bg-full-day.png",
+            night: "./assets/energy-bg-full-night.png"
+          },
+          no_ev: {
+            day: "./assets/energy-bg-no-ev-day.png",
+            night: "./assets/energy-bg-no-ev-night.png"
+          },
+          no_solar_battery: {
+            day: "./assets/energy-bg-no-solar-battery-day.png",
+            night: "./assets/energy-bg-no-solar-battery-night.png"
+          },
+          base: {
+            day: "./assets/energy-bg-base-day.png",
+            night: "./assets/energy-bg-base-night.png"
+          }
+        },
         show_ev: "input_boolean.has_ev",
+        show_solar: "input_boolean.has_solar",
         show_battery: "input_boolean.has_battery",
         entities: {
           grid_power: "sensor.grid_power_w",
@@ -169,15 +200,20 @@
 
       function render() {
         state.phase += 0.18;
-        const solar = 4200 + Math.sin(state.phase) * 780;
+        const solar = state.showSolar ? 4200 + Math.sin(state.phase) * 780 : 0;
         const house = 2350 + Math.cos(state.phase * 1.3) * 420;
         const ev = state.showEv ? 6200 + Math.sin(state.phase * 1.9) * 900 : 0;
         const battery = state.showBattery ? -980 + Math.sin(state.phase * 1.4) * 520 : 0;
         const grid = house + ev + Math.max(0, battery) - solar;
         const batterySoc = 82 + Math.sin(state.phase / 3) * 5;
+        const weather = weatherStates[state.weatherIndex];
 
         evToggle.setAttribute("aria-pressed", String(state.showEv));
+        solarToggle.setAttribute("aria-pressed", String(state.showSolar));
         batteryToggle.setAttribute("aria-pressed", String(state.showBattery));
+        timeToggle.setAttribute("aria-pressed", String(state.isDay));
+        timeToggle.textContent = state.isDay ? "Day mode" : "Night mode";
+        weatherToggle.textContent = `Weather: ${weather}`;
 
         card.hass = {
           states: {
@@ -191,8 +227,10 @@
             "sensor.solar_energy_today": sensor("22.4"),
             "sensor.home_energy_today": sensor("15.9"),
             "input_boolean.has_ev": sensor(state.showEv ? "on" : "off"),
+            "input_boolean.has_solar": sensor(state.showSolar ? "on" : "off"),
             "input_boolean.has_battery": sensor(state.showBattery ? "on" : "off"),
-            "weather.home": sensor("partlycloudy", { temperature: 18 })
+            "sun.sun": sensor(state.isDay ? "above_horizon" : "below_horizon"),
+            "weather.home": sensor(weather, { temperature: state.isDay ? 21 : 18 })
           }
         };
       }
@@ -202,8 +240,23 @@
         render();
       });
 
+      solarToggle.addEventListener("click", () => {
+        state.showSolar = !state.showSolar;
+        render();
+      });
+
       batteryToggle.addEventListener("click", () => {
         state.showBattery = !state.showBattery;
+        render();
+      });
+
+      timeToggle.addEventListener("click", () => {
+        state.isDay = !state.isDay;
+        render();
+      });
+
+      weatherToggle.addEventListener("click", () => {
+        state.weatherIndex = (state.weatherIndex + 1) % weatherStates.length;
         render();
       });
 

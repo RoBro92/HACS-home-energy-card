@@ -4,6 +4,8 @@ const { LitElement, html, css } = litRuntime;
 const DEFAULT_BACKGROUND_FULL = "/local/energy-bg-full.jpg";
 const DEFAULT_BACKGROUND_NO_EV = "/local/energy-bg-no-ev.jpg";
 const ACTIVE_THRESHOLD_W = 25;
+const DAY_START_HOUR = 6;
+const NIGHT_START_HOUR = 19;
 
 async function resolveLitRuntime() {
   if (typeof window !== "undefined" && window.LitElement && window.html && window.css) {
@@ -114,6 +116,77 @@ export function weatherIcon(condition) {
   return icons[String(condition || "").toLowerCase()] || "mdi:weather-partly-cloudy";
 }
 
+export function weatherTreatment(condition) {
+  const value = String(condition || "").toLowerCase();
+  if (["rainy", "pouring", "lightning-rainy"].includes(value)) return "rain";
+  if (["lightning", "exceptional"].includes(value)) return "storm";
+  if (["snowy", "snowy-rainy", "hail"].includes(value)) return "snow";
+  if (["fog"].includes(value)) return "fog";
+  if (["cloudy", "partlycloudy", "windy", "windy-variant"].includes(value)) return "cloud";
+  if (["clear", "sunny", "clear-night"].includes(value)) return "clear";
+  return "cloud";
+}
+
+export function timeOfDay(config = {}, hass, now = new Date()) {
+  const configured = config.time_of_day ?? config.timeOfDay;
+  if (configured) {
+    if (typeof configured === "string" && configured.includes(".")) {
+      const value = String(stateValue(hass, configured)).toLowerCase();
+      if (["above_horizon", "day", "sunny", "on", "true"].includes(value)) return "day";
+      if (["below_horizon", "night", "off", "false"].includes(value)) return "night";
+    }
+    const raw = String(configured).toLowerCase();
+    if (raw === "day" || raw === "night") return raw;
+  }
+
+  const sunEntity = config.sun_entity || config.sunEntity || config.entities?.sun;
+  const sunState = String(stateValue(hass, sunEntity || "sun.sun")).toLowerCase();
+  if (sunState === "above_horizon") return "day";
+  if (sunState === "below_horizon") return "night";
+
+  const hour = now.getHours();
+  return hour >= DAY_START_HOUR && hour < NIGHT_START_HOUR ? "day" : "night";
+}
+
+export function setupBackgroundKey(visible) {
+  if (!visible.ev && !visible.solar && !visible.battery) return "base";
+  if (!visible.solar && !visible.battery) return "no_solar_battery";
+  if (!visible.ev) return "no_ev";
+  return "full";
+}
+
+function readBackgroundValue(entry, mode, treatment) {
+  if (!entry) return null;
+  if (typeof entry === "string") return entry;
+  const modeEntry = entry[mode];
+  if (modeEntry && typeof modeEntry === "object") {
+    return modeEntry[treatment] || modeEntry.default || null;
+  }
+  return entry[`${mode}_${treatment}`] || modeEntry || entry.default || null;
+}
+
+export function selectBackground(config = {}, visible = {}, mode = "night", treatment = "cloud") {
+  const backgrounds = config.backgrounds || {};
+  const setupKey = setupBackgroundKey(visible);
+  const aliases = {
+    full: ["full", "default"],
+    no_ev: ["no_ev", "noEv"],
+    no_solar_battery: ["no_solar_battery", "noSolarBattery", "no_solar_no_battery", "noSolarNoBattery"],
+    base: ["base", "home_only", "homeOnly", "no_ev_solar_battery", "noEvSolarBattery"],
+  };
+
+  for (const key of aliases[setupKey] || [setupKey]) {
+    const value = readBackgroundValue(backgrounds[key], mode, treatment);
+    if (value) return value;
+  }
+
+  if (setupKey === "no_ev" && config.background_no_ev) return config.background_no_ev;
+  if (setupKey === "full" && config.background_full) return config.background_full;
+  if (config.background_full) return config.background_full;
+  if (config.background_no_ev) return config.background_no_ev;
+  return setupKey === "no_ev" ? DEFAULT_BACKGROUND_NO_EV : DEFAULT_BACKGROUND_FULL;
+}
+
 function roundTemperature(value) {
   const parsed = parseNumber(value);
   if (parsed === null) return "-";
@@ -144,6 +217,7 @@ export function buildEnergyModel(config = {}, hass) {
   const entities = config.entities || {};
   const energyToday = config.energy_today || config.energyToday || {};
   const showEv = entityEnabled(config.show_ev, hass, false);
+  const showSolar = entityEnabled(config.show_solar, hass, true);
   const showBattery = entityEnabled(config.show_battery, hass, true);
 
   const gridWatts = parseNumber(stateValue(hass, entities.grid_power)) ?? 0;
@@ -155,19 +229,21 @@ export function buildEnergyModel(config = {}, hass) {
   const weatherEntity = entities.weather || config.weather;
   const weatherState = stateValue(hass, weatherEntity);
   const weatherAttributes = stateAttributes(hass, weatherEntity);
+  const mode = timeOfDay(config, hass, config.now ? new Date(config.now) : new Date());
+  const treatment = weatherTreatment(weatherState);
+  const visible = {
+    ev: showEv,
+    solar: showSolar,
+    battery: showBattery,
+  };
 
   const model = {
     title: config.title || "Energy Flow",
     subtitle: config.subtitle || "Live home power",
-    background:
-      showEv || !config.background_no_ev
-        ? config.background_full || DEFAULT_BACKGROUND_FULL
-        : config.background_no_ev || DEFAULT_BACKGROUND_NO_EV,
+    background: selectBackground(config, visible, mode, treatment),
+    mode,
     entities,
-    visible: {
-      ev: showEv,
-      battery: showBattery,
-    },
+    visible,
     grid: {
       watts: gridWatts,
       powerLabel: formatPower(gridWatts),
@@ -203,6 +279,7 @@ export function buildEnergyModel(config = {}, hass) {
       entity: weatherEntity,
       condition: weatherState,
       icon: weatherIcon(weatherState),
+      treatment,
       temperatureLabel: roundTemperature(weatherAttributes.temperature),
     },
     flows: [],
@@ -219,9 +296,11 @@ export function buildEnergyModel(config = {}, hass) {
       gridWatts >= 0 ? "#4eb4ff" : "#5ef2a1",
     ),
   );
-  model.flows.push(
-    flow("solar", solarWatts, "production", "M 63 8 C 59 16, 54 22, 49 29 S 45 36, 39 40", "#ffd15a"),
-  );
+  if (showSolar) {
+    model.flows.push(
+      flow("solar", solarWatts, "production", "M 63 8 C 59 16, 54 22, 49 29 S 45 36, 39 40", "#ffd15a"),
+    );
+  }
   if (showEv) {
     model.flows.push(
       flow("ev", evWatts, evWatts >= 0 ? "charging" : "discharging", "M 53 41 C 64 44, 73 45, 86 46", "#4fe9ff"),
@@ -305,6 +384,92 @@ class EnergyHomeVisualCard extends LitElement {
       background-size: cover;
       transform: scale(1.012);
       filter: saturate(1.08) contrast(1.06);
+    }
+
+    .weather-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: .72;
+      transition: opacity .6s ease, background .6s ease;
+    }
+
+    .weather-clear {
+      opacity: .18;
+      background: linear-gradient(180deg, rgba(255, 222, 120, .16), transparent 44%);
+    }
+
+    .weather-cloud {
+      background:
+        linear-gradient(180deg, rgba(145, 171, 190, .18), transparent 58%),
+        radial-gradient(ellipse at 48% 0%, rgba(190, 215, 230, .16), transparent 34%);
+    }
+
+    .weather-rain {
+      background:
+        repeating-linear-gradient(105deg, rgba(155, 215, 255, .22) 0 1px, transparent 1px 17px),
+        linear-gradient(180deg, rgba(75, 125, 170, .22), rgba(0, 0, 0, .12));
+      animation: rain 1.1s linear infinite;
+    }
+
+    .weather-storm {
+      background:
+        radial-gradient(circle at 78% 9%, rgba(160, 205, 255, .34), transparent 18%),
+        repeating-linear-gradient(106deg, rgba(155, 215, 255, .24) 0 1px, transparent 1px 15px),
+        linear-gradient(180deg, rgba(20, 36, 58, .45), rgba(0, 0, 0, .18));
+      animation: rain .9s linear infinite, storm-pulse 4.8s ease-in-out infinite;
+    }
+
+    .weather-snow {
+      background:
+        radial-gradient(circle at 8% 12%, rgba(255, 255, 255, .30) 0 1px, transparent 2px),
+        radial-gradient(circle at 38% 22%, rgba(255, 255, 255, .28) 0 1px, transparent 2px),
+        radial-gradient(circle at 68% 8%, rgba(255, 255, 255, .30) 0 1px, transparent 2px),
+        linear-gradient(180deg, rgba(190, 225, 255, .18), transparent 58%);
+      background-size: 90px 120px, 130px 160px, 110px 150px, auto;
+      animation: snow 8s linear infinite;
+    }
+
+    .weather-fog {
+      background:
+        linear-gradient(180deg, rgba(200, 220, 225, .18), rgba(200, 220, 225, .08) 54%, transparent),
+        repeating-linear-gradient(0deg, rgba(220, 235, 240, .10) 0 2px, transparent 2px 26px);
+      filter: blur(.2px);
+    }
+
+    .mode-day .scene {
+      filter: saturate(1.02) contrast(1.02);
+    }
+
+    .mode-day .atmosphere {
+      background:
+        linear-gradient(100deg, rgba(45, 156, 255, .05), transparent 34%),
+        radial-gradient(circle at 76% 14%, rgba(255, 222, 145, .10), transparent 24%);
+    }
+
+    @keyframes rain {
+      to {
+        background-position: 0 44px, 0 0;
+      }
+    }
+
+    @keyframes snow {
+      to {
+        background-position: 10px 120px, -20px 160px, 18px 150px, 0 0;
+      }
+    }
+
+    @keyframes storm-pulse {
+      0%, 78%, 100% {
+        opacity: .74;
+      }
+      80% {
+        opacity: .96;
+      }
+      82% {
+        opacity: .62;
+      }
     }
 
     .atmosphere {
@@ -667,14 +832,17 @@ class EnergyHomeVisualCard extends LitElement {
     this._model = model;
 
     return html`
-      <ha-card style="--energy-background: url('${model.background}')">
+      <ha-card class="mode-${model.mode} weather-${model.weather.treatment}" style="--energy-background: url('${model.background}')">
         <div class="scene"></div>
+        <div class="weather-layer weather-${model.weather.treatment}"></div>
         <div class="atmosphere"></div>
         <div class="content">
           ${this.renderTopbar(model)}
           <div class="mid">
             ${this.renderFlows(model)}
-            ${this.renderNode("solar", "Solar", model.solar.powerLabel, model.solar.status, model.entities.solar_power)}
+            ${model.visible.solar
+              ? this.renderNode("solar", "Solar", model.solar.powerLabel, model.solar.status, model.entities.solar_power)
+              : html``}
             ${this.renderNode("grid", "Grid", model.grid.powerLabel, model.grid.status, model.entities.grid_power)}
             ${this.renderNode("house", "Home", model.house.powerLabel, model.house.status, model.entities.house_power)}
             ${model.visible.ev
@@ -705,7 +873,7 @@ class EnergyHomeVisualCard extends LitElement {
         </div>
         <div class="summary" aria-label="Daily energy summary">
           ${this.renderSummaryItem("Grid", model.energyToday.grid)}
-          ${this.renderSummaryItem("Solar", model.energyToday.solar)}
+          ${model.visible.solar ? this.renderSummaryItem("Solar", model.energyToday.solar) : html``}
           ${this.renderSummaryItem("Home", model.energyToday.home)}
         </div>
         <button class="weather" type="button" @click=${() => this.openMoreInfo(model.weather.entity)}>
@@ -763,7 +931,9 @@ class EnergyHomeVisualCard extends LitElement {
     return html`
       <div class="statusbar">
         ${this.renderPill("Electricity", model.grid.status, model.grid.powerLabel, "mdi:transmission-tower", "#58bfff", model.entities.grid_power)}
-        ${this.renderPill("Solar", model.solar.status, model.solar.powerLabel, "mdi:solar-power-variant", "#ffd15a", model.entities.solar_power)}
+        ${model.visible.solar
+          ? this.renderPill("Solar", model.solar.status, model.solar.powerLabel, "mdi:solar-power-variant", "#ffd15a", model.entities.solar_power)
+          : html``}
         ${model.visible.ev
           ? this.renderPill("Electric Vehicle", model.ev.status, model.ev.powerLabel, "mdi:car-electric", "#50eaff", model.entities.ev_power)
           : html``}

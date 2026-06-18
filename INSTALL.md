@@ -11,8 +11,14 @@
 2. Put the provided background images in `/config/www/`:
 
    ```text
-   /config/www/energy-bg-full.jpg
-   /config/www/energy-bg-no-ev.jpg
+   /config/www/energy-bg-full-day.png
+   /config/www/energy-bg-full-night.png
+   /config/www/energy-bg-no-ev-day.png
+   /config/www/energy-bg-no-ev-night.png
+   /config/www/energy-bg-no-solar-battery-day.png
+   /config/www/energy-bg-no-solar-battery-night.png
+   /config/www/energy-bg-base-day.png
+   /config/www/energy-bg-base-night.png
    ```
 
 3. Add the Lovelace resource:
@@ -37,9 +43,15 @@
 
 ## Background Images
 
-The card expects the two supplied images by default:
+The card can use a setup-aware background matrix:
 
-- `/local/energy-bg-full.jpg`
-- `/local/energy-bg-no-ev.jpg`
+- `/local/energy-bg-full-day.png`
+- `/local/energy-bg-full-night.png`
+- `/local/energy-bg-no-ev-day.png`
+- `/local/energy-bg-no-ev-night.png`
+- `/local/energy-bg-no-solar-battery-day.png`
+- `/local/energy-bg-no-solar-battery-night.png`
+- `/local/energy-bg-base-day.png`
+- `/local/energy-bg-base-night.png`
 
-You can override both paths in YAML with `background_full` and `background_no_ev`.
+You can override paths in YAML with the `backgrounds` object. The older `background_full` and `background_no_ev` keys still work as fallbacks.

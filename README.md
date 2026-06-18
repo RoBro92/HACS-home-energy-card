@@ -5,8 +5,10 @@
 ## Features
 
 - LitElement custom card registered as `custom:energy-home-visual-card`.
-- Switches between `energy-bg-full.jpg` and `energy-bg-no-ev.jpg` using `show_ev`.
-- Supports `show_ev` and `show_battery` as booleans or Home Assistant entities.
+- Switches between setup-specific backgrounds using `show_ev`, `show_solar`, and `show_battery`.
+- Supports day/night background switching from `sun.sun` or another configured entity.
+- Adds live weather visual treatments from the configured weather entity.
+- Supports `show_ev`, `show_solar`, and `show_battery` as booleans or Home Assistant entities.
 - Configurable entity IDs for power, energy summary, battery SOC, and weather.
 - Animated SVG flow overlays for grid, solar, EV, and battery.
 - Animation speed scales with the current power value.
@@ -19,13 +21,26 @@
 
 ```yaml
 type: custom:energy-home-visual-card
-background_full: /local/energy-bg-full.jpg
-background_no_ev: /local/energy-bg-no-ev.jpg
+backgrounds:
+  full:
+    day: /local/energy-bg-full-day.png
+    night: /local/energy-bg-full-night.png
+  no_ev:
+    day: /local/energy-bg-no-ev-day.png
+    night: /local/energy-bg-no-ev-night.png
+  no_solar_battery:
+    day: /local/energy-bg-no-solar-battery-day.png
+    night: /local/energy-bg-no-solar-battery-night.png
+  base:
+    day: /local/energy-bg-base-day.png
+    night: /local/energy-bg-base-night.png
 
 show_ev: input_boolean.has_ev
+show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
 
 entities:
+  sun: sun.sun
   grid_power: sensor.grid_power_w
   solar_power: sensor.solar_power_w
   house_power: sensor.house_consumption_w
@@ -46,10 +61,16 @@ See `examples/dashboard.yaml` and `examples/dashboard-no-ev.yaml` for fuller das
 
 | Key | Required | Description |
 | --- | --- | --- |
-| `background_full` | No | Image with house, solar, grid, EV/carport, and battery. Defaults to `/local/energy-bg-full.jpg`. |
-| `background_no_ev` | No | Image with no EV/carport. Defaults to `/local/energy-bg-no-ev.jpg`. |
+| `backgrounds.full.day/night` | No | Images for EV + solar + battery setup. |
+| `backgrounds.no_ev.day/night` | No | Images for solar + battery, with no EV/car. |
+| `backgrounds.no_solar_battery.day/night` | No | Images for homes without solar and battery. |
+| `backgrounds.base.day/night` | No | Images for homes without EV, solar, or battery. |
+| `background_full` | No | Legacy single full image fallback. |
+| `background_no_ev` | No | Legacy no-EV image fallback. |
 | `show_ev` | No | Boolean or entity. Entity states `on`, `true`, `home`, `charging`, `plugged_in`, and `connected` show the EV. |
+| `show_solar` | No | Boolean or entity. Defaults to visible. |
 | `show_battery` | No | Boolean or entity. Defaults to visible. |
+| `entities.sun` | No | Sun entity for day/night switching. Defaults to `sun.sun`; falls back to local time if unavailable. |
 | `entities.grid_power` | Yes | Current grid power in W. Positive is importing, negative is exporting. |
 | `entities.solar_power` | Yes | Current solar production in W. |
 | `entities.house_power` | Yes | Current house consumption in W. |
@@ -60,6 +81,24 @@ See `examples/dashboard.yaml` and `examples/dashboard-no-ev.yaml` for fuller das
 | `energy_today.grid` | No | Daily grid energy sensor in kWh. |
 | `energy_today.solar` | No | Daily solar energy sensor in kWh. |
 | `energy_today.home` | No | Daily home energy sensor in kWh. |
+
+## Background Selection
+
+The card chooses the background in this order:
+
+1. Setup: `full`, `no_ev`, `no_solar_battery`, or `base`.
+2. Time: `day` or `night`, based on `entities.sun`, `time_of_day`, or local clock fallback.
+3. Weather: live overlay treatment from the weather entity. Rain, storm, snow, fog, cloud, and clear states change the visual layer without requiring separate image files.
+
+You can provide extra weather-specific images later with keys like `day_rain` or nested values such as:
+
+```yaml
+backgrounds:
+  full:
+    day:
+      rain: /local/energy-bg-full-day-rain.png
+    night: /local/energy-bg-full-night.png
+```
 
 ## Card-Mod Variables
 
