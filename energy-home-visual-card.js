@@ -276,6 +276,7 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     ha-card {
+      display: block;
       position: relative;
       overflow: hidden;
       min-height: var(--energy-card-min-height);

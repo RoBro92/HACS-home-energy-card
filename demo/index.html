@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Energy Home Visual Card Preview</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #03080c;
+        color: #f7fbff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100svh;
+        margin: 0;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        gap: 12px;
+        padding: clamp(10px, 1.6vw, 22px);
+        background:
+          linear-gradient(180deg, rgba(7, 16, 23, .98), rgba(1, 4, 7, 1)),
+          #03080c;
+      }
+
+      main {
+        min-height: 0;
+        display: grid;
+      }
+
+      energy-home-visual-card {
+        align-self: center;
+        --energy-card-height: calc(100svh - 96px);
+        --energy-card-min-height: 560px;
+        --energy-card-radius: 8px;
+        --energy-card-shadow: 0 30px 90px rgba(0, 0, 0, .58);
+      }
+
+      .controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        min-height: 42px;
+      }
+
+      .controls button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, .18);
+        border-radius: 8px;
+        background: rgba(8, 20, 30, .74);
+        color: #f7fbff;
+        font: inherit;
+        font-size: 13px;
+        padding: 9px 12px;
+        cursor: pointer;
+      }
+
+      .controls button[aria-pressed="true"] {
+        border-color: rgba(88, 213, 255, .62);
+        box-shadow: inset 0 0 0 1px rgba(88, 213, 255, .24);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <energy-home-visual-card></energy-home-visual-card>
+    </main>
+    <div class="controls" aria-label="Preview toggles">
+      <button id="evToggle" type="button" aria-pressed="true">EV visible</button>
+      <button id="batteryToggle" type="button" aria-pressed="true">Battery visible</button>
+    </div>
+
+    <script type="module">
+      import { LitElement, html, css } from "https://cdn.jsdelivr.net/npm/lit@3/+esm";
+
+      window.LitElement = LitElement;
+      window.html = html;
+      window.css = css;
+
+      class HaCard extends HTMLElement {}
+
+      class HaIcon extends HTMLElement {
+        static get observedAttributes() {
+          return ["icon"];
+        }
+
+        connectedCallback() {
+          this.render();
+        }
+
+        attributeChangedCallback() {
+          this.render();
+        }
+
+        render() {
+          const icons = {
+            "mdi:transmission-tower": "⌁",
+            "mdi:solar-power-variant": "☀",
+            "mdi:car-electric": "⚡",
+            "mdi:home-battery": "▰",
+            "mdi:weather-partly-cloudy": "◐",
+            "mdi:weather-sunny": "☀",
+            "mdi:weather-rainy": "☂"
+          };
+          const glyph = icons[this.getAttribute("icon")] || "•";
+          this.shadowRoot || this.attachShadow({ mode: "open" });
+          this.shadowRoot.innerHTML = `
+            <style>
+              :host {
+                display: inline-grid;
+                place-items: center;
+                width: 1.25em;
+                height: 1.25em;
+                font-size: 1.15em;
+                line-height: 1;
+              }
+            </style>
+            <span>${glyph}</span>
+          `;
+        }
+      }
+
+      customElements.define("ha-card", HaCard);
+      customElements.define("ha-icon", HaIcon);
+
+      await import("../energy-home-visual-card.js?v=preview-2");
+
+      const card = document.querySelector("energy-home-visual-card");
+      const evToggle = document.querySelector("#evToggle");
+      const batteryToggle = document.querySelector("#batteryToggle");
+      const state = {
+        showEv: true,
+        showBattery: true,
+        phase: 0
+      };
+
+      card.setConfig({
+        title: "Energy Flow",
+        subtitle: "Live home power",
+        background_full: "./assets/energy-bg-full-preview.png",
+        background_no_ev: "./assets/energy-bg-full-preview.png",
+        show_ev: "input_boolean.has_ev",
+        show_battery: "input_boolean.has_battery",
+        entities: {
+          grid_power: "sensor.grid_power_w",
+          solar_power: "sensor.solar_power_w",
+          house_power: "sensor.house_power_w",
+          ev_power: "sensor.ev_charging_power_w",
+          battery_power: "sensor.battery_power_w",
+          battery_soc: "sensor.battery_soc",
+          weather: "weather.home"
+        },
+        energy_today: {
+          grid: "sensor.grid_energy_today",
+          solar: "sensor.solar_energy_today",
+          home: "sensor.home_energy_today"
+        }
+      });
+
+      function sensor(value, attributes = {}) {
+        return { state: String(value), attributes };
+      }
+
+      function render() {
+        state.phase += 0.18;
+        const solar = 4200 + Math.sin(state.phase) * 780;
+        const house = 2350 + Math.cos(state.phase * 1.3) * 420;
+        const ev = state.showEv ? 6200 + Math.sin(state.phase * 1.9) * 900 : 0;
+        const battery = state.showBattery ? -980 + Math.sin(state.phase * 1.4) * 520 : 0;
+        const grid = house + ev + Math.max(0, battery) - solar;
+        const batterySoc = 82 + Math.sin(state.phase / 3) * 5;
+
+        evToggle.setAttribute("aria-pressed", String(state.showEv));
+        batteryToggle.setAttribute("aria-pressed", String(state.showBattery));
+
+        card.hass = {
+          states: {
+            "sensor.grid_power_w": sensor(Math.round(grid)),
+            "sensor.solar_power_w": sensor(Math.round(solar)),
+            "sensor.house_power_w": sensor(Math.round(house)),
+            "sensor.ev_charging_power_w": sensor(Math.round(ev)),
+            "sensor.battery_power_w": sensor(Math.round(battery)),
+            "sensor.battery_soc": sensor(Math.round(batterySoc)),
+            "sensor.grid_energy_today": sensor("7.8"),
+            "sensor.solar_energy_today": sensor("22.4"),
+            "sensor.home_energy_today": sensor("15.9"),
+            "input_boolean.has_ev": sensor(state.showEv ? "on" : "off"),
+            "input_boolean.has_battery": sensor(state.showBattery ? "on" : "off"),
+            "weather.home": sensor("partlycloudy", { temperature: 18 })
+          }
+        };
+      }
+
+      evToggle.addEventListener("click", () => {
+        state.showEv = !state.showEv;
+        render();
+      });
+
+      batteryToggle.addEventListener("click", () => {
+        state.showBattery = !state.showBattery;
+        render();
+      });
+
+      render();
+      setInterval(render, 1600);
+    </script>
+  </body>
+</html>
