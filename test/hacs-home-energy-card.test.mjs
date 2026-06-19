@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildEnergyModel,
-  EnergyHomeVisualCard,
+  HacsHomeEnergyCard,
   entityEnabled,
   flowSpeedSeconds,
   formatEnergy,
@@ -12,7 +12,7 @@ import {
   setupBackgroundKey,
   stateValue,
   timeOfDay,
-} from "../energy-home-visual-card.js";
+} from "../hacs-home-energy-card.js";
 
 const hass = {
   states: {
@@ -334,7 +334,7 @@ test("buildEnergyModel calculates solar efficiency from configured capacity", ()
 });
 
 test("setConfig only requires grid and home power sensors", () => {
-  const card = new EnergyHomeVisualCard();
+  const card = new HacsHomeEnergyCard();
 
   assert.doesNotThrow(() =>
     card.setConfig({

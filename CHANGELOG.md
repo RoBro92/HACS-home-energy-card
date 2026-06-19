@@ -10,6 +10,6 @@
 - Adds README screenshots generated from the live demo.
 - Adds configurable node labels, optional node extra values, custom bottom-bar cards, grid cost/tariff support, and detail-panel quick actions.
 - Adds optional `card_width`, `card_height`, `min_width`, and `min_height` sizing controls.
-- Adds the `custom:energy-home-visual-card` Lovelace card.
+- Adds the `custom:hacs-home-energy-card` Lovelace card.
 - Ships setup-aware day/night backgrounds for EV, solar, and battery combinations.
 - Supports module-relative default backgrounds when installed through HACS.

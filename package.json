@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-dist.mjs",
-    "check": "node --check energy-home-visual-card.js && node --test test/*.test.mjs",
+    "check": "node --check hacs-home-energy-card.js && node --test test/*.test.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "keywords": [

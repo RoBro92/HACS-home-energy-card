@@ -1,4 +1,4 @@
-# Energy Home Visual Card
+# HACS-home-energy-card
 
 A cinematic Home Assistant Lovelace card for live energy flow, with setup-aware day/night background images for EV, solar, and battery combinations.
 

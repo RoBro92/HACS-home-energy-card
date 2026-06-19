@@ -1,6 +1,6 @@
-# Energy Home Visual Card
+# HACS-home-energy-card
 
-`energy-home-visual-card` is a fullscreen-friendly Home Assistant Lovelace custom card for cinematic energy monitoring. It places animated SVG power-flow lines over a high-quality home energy background and renders live values for grid, solar, house load, EV charging, battery state, and daily energy.
+`hacs-home-energy-card` is a fullscreen-friendly Home Assistant Lovelace custom card for cinematic energy monitoring. It places animated SVG power-flow lines over a high-quality home energy background and renders live values for grid, solar, house load, EV charging, battery state, and daily energy.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RoBro92&repository=HACS-home-energy-card&category=dashboard)
 
@@ -15,7 +15,7 @@ RoBro92/HACS-home-energy-card
 The Lovelace resource should be:
 
 ```yaml
-url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
+url: /hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js
 type: module
 ```
 
@@ -27,17 +27,17 @@ HACS installs the card and bundled background images automatically.
 
 | Day | Night |
 | --- | --- |
-| ![Energy Home Visual Card day view](docs/images/card-day.png) | ![Energy Home Visual Card night view](docs/images/card-night.png) |
+| ![HACS-home-energy-card day view](docs/images/card-day.png) | ![HACS-home-energy-card night view](docs/images/card-night.png) |
 
 ### Setup Variants
 
 | Full setup | No EV | No solar |
 | --- | --- | --- |
-| ![Energy Home Visual Card full setup](docs/images/card-preview.png) | ![Energy Home Visual Card with EV removed](docs/images/card-no-ev.png) | ![Energy Home Visual Card with solar removed](docs/images/card-no-solar.png) |
+| ![HACS-home-energy-card full setup](docs/images/card-preview.png) | ![HACS-home-energy-card with EV removed](docs/images/card-no-ev.png) | ![HACS-home-energy-card with solar removed](docs/images/card-no-solar.png) |
 
 | No battery | Base home |
 | --- | --- |
-| ![Energy Home Visual Card with battery removed](docs/images/card-no-battery.png) | ![Energy Home Visual Card with EV, solar, and battery removed](docs/images/card-base.png) |
+| ![HACS-home-energy-card with battery removed](docs/images/card-no-battery.png) | ![HACS-home-energy-card with EV, solar, and battery removed](docs/images/card-base.png) |
 
 ### Detail Panels
 
@@ -45,7 +45,7 @@ HACS installs the card and bundled background images automatically.
 
 ## Features
 
-- LitElement custom card registered as `custom:energy-home-visual-card`.
+- LitElement custom card registered as `custom:hacs-home-energy-card`.
 - Switches between setup-specific backgrounds using `show_ev`, `show_solar`, and `show_battery`.
 - Supports day/night background switching from `sun.sun` or another configured entity.
 - Supports `show_ev`, `show_solar`, and `show_battery` as booleans or Home Assistant entities.
@@ -63,7 +63,7 @@ HACS installs the card and bundled background images automatically.
 ## Basic Usage
 
 ```yaml
-type: custom:energy-home-visual-card
+type: custom:hacs-home-energy-card
 show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
@@ -217,7 +217,7 @@ Most users should use `card_width`, `card_height`, `min_width`, and `min_height`
 ```yaml
 card_mod:
   style: |
-    energy-home-visual-card {
+    hacs-home-energy-card {
       --energy-card-aspect-ratio: 1672 / 941;
       --energy-card-radius: 8px;
       --energy-card-accent: #58d5ff;

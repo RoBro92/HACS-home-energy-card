@@ -1,4 +1,4 @@
-# Energy Home Visual Card Setup
+# HACS-home-energy-card Setup
 
 This card can be configured from the Home Assistant visual card editor or with YAML. The visual editor exposes the same fields listed below; YAML is useful when copying between dashboards or when using helper entities for setup toggles.
 
@@ -16,7 +16,7 @@ RoBro92/HACS-home-energy-card
 3. Confirm the Lovelace resource exists:
 
 ```yaml
-url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
+url: /hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js
 type: module
 ```
 
@@ -27,7 +27,7 @@ type: module
 In a Home Assistant dashboard:
 
 1. Edit the dashboard.
-2. Add a manual card or search for `Energy Home Visual Card`.
+2. Add a manual card or search for `HACS-home-energy-card`.
 3. Enter your entity IDs in the card editor fields.
 4. Use the setup fields to enable or disable EV, solar, and battery sections.
 
@@ -260,7 +260,7 @@ Accepted day states are `above_horizon`, `day`, `sunny`, `on`, and `true`. Accep
 ## Full Example
 
 ```yaml
-type: custom:energy-home-visual-card
+type: custom:hacs-home-energy-card
 
 show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
@@ -348,7 +348,7 @@ detail_entities:
 ## No EV Example
 
 ```yaml
-type: custom:energy-home-visual-card
+type: custom:hacs-home-energy-card
 show_ev: false
 show_solar: true
 show_battery: true
@@ -367,7 +367,7 @@ entities:
 ## No Solar Or Battery Example
 
 ```yaml
-type: custom:energy-home-visual-card
+type: custom:hacs-home-energy-card
 show_ev: true
 show_solar: false
 show_battery: false

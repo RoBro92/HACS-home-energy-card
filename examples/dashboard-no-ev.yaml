@@ -1,4 +1,4 @@
-type: custom:energy-home-visual-card
+type: custom:hacs-home-energy-card
 show_ev: false
 show_solar: true
 show_battery: true

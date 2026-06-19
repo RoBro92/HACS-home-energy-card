@@ -24,7 +24,7 @@ const files = [
 
 await rm(distDir, { recursive: true, force: true });
 await mkdir(distDir, { recursive: true });
-await copyFile("energy-home-visual-card.js", join(distDir, "energy-home-visual-card.js"));
+await copyFile("hacs-home-energy-card.js", join(distDir, "hacs-home-energy-card.js"));
 
 for (const file of files) {
   await copyFile(join(assetsDir, file), join(distDir, file));

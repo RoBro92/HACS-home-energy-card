@@ -11,11 +11,11 @@
    RoBro92/HACS-home-energy-card
    ```
 
-3. Install `Energy Home Visual Card`.
+3. Install `HACS-home-energy-card`.
 4. Confirm the Lovelace resource exists:
 
    ```yaml
-   url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
+   url: /hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js
    type: module
    ```
 
@@ -27,20 +27,20 @@
 2. Copy the contents of `dist/` to:
 
    ```text
-   /config/www/energy-home-visual-card/
+   /config/www/hacs-home-energy-card/
    ```
 
 3. Add this Lovelace resource:
 
    ```yaml
-   url: /local/energy-home-visual-card/energy-home-visual-card.js
+   url: /local/hacs-home-energy-card/hacs-home-energy-card.js
    type: module
    ```
 
 4. Add the card to a dashboard:
 
    ```yaml
-   type: custom:energy-home-visual-card
+   type: custom:hacs-home-energy-card
    entities:
      grid_power: sensor.grid_power_w
      house_power: sensor.house_consumption_w
@@ -48,10 +48,10 @@
 
 ## Background Images
 
-The bundled images load automatically from the same folder as `energy-home-visual-card.js`.
+The bundled images load automatically from the same folder as `hacs-home-energy-card.js`.
 
 - HACS path: `/hacsfiles/HACS-home-energy-card/energy-bg-*.png`
-- Manual path: `/local/energy-home-visual-card/energy-bg-*.png`
+- Manual path: `/local/hacs-home-energy-card/energy-bg-*.png`
 
 Use `backgrounds` only if you want to override the bundled images.
 

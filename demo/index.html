@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Energy Home Visual Card Preview</title>
+    <title>HACS-home-energy-card Preview</title>
     <style>
       :root {
         color-scheme: dark;
@@ -34,7 +34,7 @@
         place-items: center;
       }
 
-      energy-home-visual-card {
+      hacs-home-energy-card {
         width: min(100%, calc((100svh - 96px) * 1.777));
         --energy-card-radius: 8px;
         --energy-card-shadow: 0 30px 90px rgba(0, 0, 0, .58);
@@ -69,7 +69,7 @@
   </head>
   <body>
     <main>
-      <energy-home-visual-card></energy-home-visual-card>
+      <hacs-home-energy-card></hacs-home-energy-card>
     </main>
     <div class="controls" aria-label="Preview toggles">
       <button id="evToggle" type="button" aria-pressed="true">EV visible</button>
@@ -135,9 +135,9 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../energy-home-visual-card.js?v=preview-19");
+      await import("../hacs-home-energy-card.js?v=preview-19");
 
-      const card = document.querySelector("energy-home-visual-card");
+      const card = document.querySelector("hacs-home-energy-card");
       const evToggle = document.querySelector("#evToggle");
       const solarToggle = document.querySelector("#solarToggle");
       const batteryToggle = document.querySelector("#batteryToggle");

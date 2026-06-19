@@ -809,7 +809,7 @@ function fireEvent(node, type, detail, options = {}) {
   );
 }
 
-class EnergyHomeVisualCard extends LitElement {
+class HacsHomeEnergyCard extends LitElement {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },
@@ -1402,7 +1402,7 @@ class EnergyHomeVisualCard extends LitElement {
   `;
 
   static getConfigElement() {
-    return document.createElement("energy-home-visual-card-editor");
+    return document.createElement("hacs-home-energy-card-editor");
   }
 
   static getStubConfig() {
@@ -1437,9 +1437,9 @@ class EnergyHomeVisualCard extends LitElement {
   }
 
   setConfig(config) {
-    if (!config) throw new Error("energy-home-visual-card requires a configuration object");
+    if (!config) throw new Error("hacs-home-energy-card requires a configuration object");
     if (!config.entities || !config.entities.grid_power || !config.entities.house_power) {
-      throw new Error("energy-home-visual-card requires entities.grid_power and entities.house_power");
+      throw new Error("hacs-home-energy-card requires entities.grid_power and entities.house_power");
     }
     this._config = config;
   }
@@ -1783,7 +1783,7 @@ const EDITOR_FIELDS = [
   ["Battery Discharge 24h", ["detail_entities", "battery", "discharge_24h"], "sensor.battery_discharge_24h"],
 ];
 
-class EnergyHomeVisualCardEditor extends LitElement {
+class HacsHomeEnergyCardEditor extends LitElement {
   static properties = {
     hass: { attribute: false },
     _config: { state: true },
@@ -1879,21 +1879,21 @@ class EnergyHomeVisualCardEditor extends LitElement {
   }
 }
 
-if (typeof customElements !== "undefined" && !customElements.get("energy-home-visual-card")) {
-  customElements.define("energy-home-visual-card", EnergyHomeVisualCard);
+if (typeof customElements !== "undefined" && !customElements.get("hacs-home-energy-card")) {
+  customElements.define("hacs-home-energy-card", HacsHomeEnergyCard);
 }
 
-if (typeof customElements !== "undefined" && !customElements.get("energy-home-visual-card-editor")) {
-  customElements.define("energy-home-visual-card-editor", EnergyHomeVisualCardEditor);
+if (typeof customElements !== "undefined" && !customElements.get("hacs-home-energy-card-editor")) {
+  customElements.define("hacs-home-energy-card-editor", HacsHomeEnergyCardEditor);
 }
 
 if (typeof window !== "undefined") {
   window.customCards = window.customCards || [];
   window.customCards.push({
-    type: "energy-home-visual-card",
-    name: "Energy Home Visual Card",
+    type: "hacs-home-energy-card",
+    name: "HACS-home-energy-card",
     description: "Cinematic animated energy flow visualisation for Home Assistant.",
   });
 }
 
-export { EnergyHomeVisualCard };
+export { HacsHomeEnergyCard };

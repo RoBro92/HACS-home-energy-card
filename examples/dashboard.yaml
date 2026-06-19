@@ -1,4 +1,4 @@
-type: custom:energy-home-visual-card
+type: custom:hacs-home-energy-card
 show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
