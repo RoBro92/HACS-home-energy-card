@@ -1,60 +1,40 @@
-# Installation
+# Install
 
 ## HACS
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RoBro92&repository=HACS-home-energy-card&category=dashboard)
 
 1. Open HACS.
-2. Add this repository as a custom Dashboard repository:
-
-   ```text
-   RoBro92/HACS-home-energy-card
-   ```
-
+2. Add `RoBro92/HACS-home-energy-card` as a custom Dashboard repository.
 3. Install HACS Home Energy Card.
-4. Confirm the Lovelace resource exists:
+4. Hard refresh Home Assistant.
 
-   ```yaml
-   url: /hacsfiles/HACS-home-energy-card/dist/hacs-home-energy-card.js
-   type: module
-   ```
+HACS should add this dashboard resource automatically:
 
-5. Refresh the browser after installing or updating the card.
+```yaml
+url: /hacsfiles/HACS-home-energy-card/dist/hacs-home-energy-card.js
+type: module
+```
 
-## Manual Install
+If the card does not appear in the card picker, check the resource above exists under Home Assistant dashboard resources, then refresh the browser cache. You can still add it with a manual card:
 
-1. Download the repository files.
-2. Copy the contents of `dist/` to:
+```yaml
+type: custom:hacs-home-energy-card
+entities:
+  grid_power: sensor.grid_power_w
+  house_power: sensor.house_consumption_w
+```
 
-   ```text
-   /config/www/hacs-home-energy-card/
-   ```
+## Manual
 
-3. Add this Lovelace resource:
+1. Copy the contents of `dist/` to `/config/www/hacs-home-energy-card/`.
+2. Add this resource:
 
-   ```yaml
-   url: /local/hacs-home-energy-card/hacs-home-energy-card.js
-   type: module
-   ```
+```yaml
+url: /local/hacs-home-energy-card/hacs-home-energy-card.js
+type: module
+```
 
-4. Add the card to a dashboard:
+3. Add the manual card YAML shown above.
 
-   ```yaml
-   type: custom:hacs-home-energy-card
-   entities:
-     grid_power: sensor.grid_power_w
-     house_power: sensor.house_consumption_w
-   ```
-
-## Background Images
-
-The bundled images load automatically from the same folder as `hacs-home-energy-card.js`.
-
-- HACS path: `/hacsfiles/HACS-home-energy-card/dist/energy-bg-*.png`
-- Manual path: `/local/hacs-home-energy-card/energy-bg-*.png`
-
-Use `backgrounds` only if you want to override the bundled images.
-
-## Setup
-
-See [docs/setup.md](docs/setup.md) for the full sensor list, sizing options, bottom bar options, detail panels, and day and night switching.
+The bundled background images must stay in the same folder as `hacs-home-energy-card.js`.

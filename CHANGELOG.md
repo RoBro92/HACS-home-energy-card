@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.3
+
+- Removes the logo from the top of the main README while keeping logo assets available for HACS and brand use.
+- Changes the first preview image to the daytime full setup card with EV, solar, and battery.
+- Improves Home Assistant card picker metadata with preview support and documentation link.
+- Updates the card stub config so the Community Card preview renders the full daytime setup.
+- Simplifies install guidance for public testers.
+
 ## 1.0.2
 
 - Adds HACS validation workflow for default HACS readiness.

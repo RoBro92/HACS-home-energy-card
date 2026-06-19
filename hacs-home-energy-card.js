@@ -1442,9 +1442,10 @@ class HacsHomeEnergyCard extends LitElement {
     return {
       title: "Energy Flow",
       subtitle: "Live home power",
-      show_ev: false,
+      show_ev: true,
       show_solar: true,
       show_battery: true,
+      time_of_day: "day",
       solar_capacity_kw: 5,
       show_title: false,
       show_daily_summary: false,
@@ -1927,7 +1928,9 @@ if (typeof window !== "undefined") {
   window.customCards.push({
     type: "hacs-home-energy-card",
     name: "HACS Home Energy Card",
-    description: "Cinematic animated energy flow visualisation for Home Assistant.",
+    description: "Cinematic home energy dashboard with solar, grid, EV, and battery flows.",
+    preview: true,
+    documentationURL: "https://github.com/RoBro92/HACS-home-energy-card/blob/main/docs/setup.md",
   });
 }
 

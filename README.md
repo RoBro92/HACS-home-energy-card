@@ -1,14 +1,10 @@
 # HACS Home Energy Card
 
-<p align="center">
-  <img src="docs/images/hacs-home-energy-card-logo.png" alt="HACS Home Energy Card logo" width="120">
-</p>
-
 HACS Home Energy Card is a Home Assistant dashboard card for cinematic home energy monitoring. It shows grid import and export, solar production, home load, EV charging, battery state, day and night backgrounds, animated energy direction, detail panels, and configurable glance cards.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RoBro92&repository=HACS-home-energy-card&category=dashboard)
 
-![HACS Home Energy Card preview](docs/images/card-preview.png)
+![HACS Home Energy Card daytime full setup preview](docs/images/card-day.png)
 
 ## Public Testing
 
@@ -49,7 +45,7 @@ HACS installs the card and bundled background images automatically. Hard refresh
 
 | Full setup | No EV | No solar |
 | --- | --- | --- |
-| ![HACS Home Energy Card full setup](docs/images/card-preview.png) | ![HACS Home Energy Card with EV removed](docs/images/card-no-ev.png) | ![HACS Home Energy Card with solar removed](docs/images/card-no-solar.png) |
+| ![HACS Home Energy Card full setup](docs/images/card-day.png) | ![HACS Home Energy Card with EV removed](docs/images/card-no-ev.png) | ![HACS Home Energy Card with solar removed](docs/images/card-no-solar.png) |
 
 | No battery | Base home |
 | --- | --- |

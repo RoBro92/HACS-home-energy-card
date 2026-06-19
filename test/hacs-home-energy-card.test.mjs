@@ -392,6 +392,17 @@ test("setConfig only requires grid and home power sensors", () => {
   );
 });
 
+test("getStubConfig renders a full daytime community card preview", () => {
+  const stub = HacsHomeEnergyCard.getStubConfig();
+
+  assert.equal(stub.show_ev, true);
+  assert.equal(stub.show_solar, true);
+  assert.equal(stub.show_battery, true);
+  assert.equal(stub.time_of_day, "day");
+  assert.equal(stub.entities.grid_power, "sensor.grid_power_w");
+  assert.equal(stub.entities.house_power, "sensor.house_power_w");
+});
+
 test("selectBackground prefers setup and time-specific background variants", () => {
   const config = {
     backgrounds: {
