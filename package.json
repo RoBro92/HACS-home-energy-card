@@ -4,6 +4,8 @@
   "description": "A cinematic Home Assistant Lovelace energy flow card.",
   "type": "module",
   "scripts": {
+    "build": "node scripts/build-dist.mjs",
+    "check": "node --check energy-home-visual-card.js && node --test test/*.test.mjs",
     "test": "node --test test/*.test.mjs"
   },
   "keywords": [
@@ -12,5 +14,20 @@
     "custom-card",
     "energy"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "files": [
+    "dist",
+    "examples",
+    "README.md",
+    "INSTALL.md",
+    "hacs.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/StonewallMedia/energy-home-visual-card.git"
+  },
+  "bugs": {
+    "url": "https://github.com/StonewallMedia/energy-home-visual-card/issues"
+  },
+  "homepage": "https://github.com/StonewallMedia/energy-home-visual-card#readme"
 }

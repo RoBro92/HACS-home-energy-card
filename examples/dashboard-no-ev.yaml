@@ -1,32 +1,6 @@
 type: custom:energy-home-visual-card
 title: Energy Flow
 subtitle: Live home power
-backgrounds:
-  full:
-    day: /local/energy-bg-full-day.png
-    night: /local/energy-bg-full-night.png
-  ev_solar:
-    day: /local/energy-bg-ev-solar-day.png
-    night: /local/energy-bg-ev-solar-night.png
-  ev_battery:
-    day: /local/energy-bg-ev-battery-day.png
-    night: /local/energy-bg-ev-battery-night.png
-  solar_battery:
-    day: /local/energy-bg-no-ev-day.png
-    night: /local/energy-bg-no-ev-night.png
-  ev_only:
-    day: /local/energy-bg-no-solar-battery-day.png
-    night: /local/energy-bg-no-solar-battery-night.png
-  solar_only:
-    day: /local/energy-bg-solar-only-day.png
-    night: /local/energy-bg-solar-only-night.png
-  battery_only:
-    day: /local/energy-bg-battery-only-day.png
-    night: /local/energy-bg-battery-only-night.png
-  base:
-    day: /local/energy-bg-base-day.png
-    night: /local/energy-bg-base-night.png
-
 show_ev: false
 show_solar: true
 show_battery: true

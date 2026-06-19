@@ -101,7 +101,7 @@ test("buildEnergyModel derives display values, directions, background, and visib
     hass,
   );
 
-  assert.equal(model.background, "/local/energy-bg-full.jpg");
+  assert.match(model.background, /energy-bg-full-night\.png$/);
   assert.equal(model.visible.ev, true);
   assert.equal(model.visible.solar, true);
   assert.equal(model.visible.battery, true);
@@ -150,6 +150,11 @@ test("selectBackground prefers setup and time-specific background variants", () 
   assert.equal(selectBackground(config, { ev: false, solar: true, battery: true }, "day"), "/local/solar-battery-day.jpg");
   assert.equal(selectBackground(config, { ev: true, solar: false, battery: false }, "night"), "/local/ev-only-night.jpg");
   assert.equal(selectBackground(config, { ev: false, solar: false, battery: false }, "day"), "/local/base-day.jpg");
+});
+
+test("selectBackground falls back to bundled module-relative assets", () => {
+  assert.match(selectBackground({}, { ev: true, solar: true, battery: true }, "day"), /energy-bg-full-day\.png$/);
+  assert.match(selectBackground({}, { ev: false, solar: false, battery: false }, "night"), /energy-bg-base-night\.png$/);
 });
 
 test("buildEnergyModel reverses EV flow when an EV sensor reports discharge power", () => {

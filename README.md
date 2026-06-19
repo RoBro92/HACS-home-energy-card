@@ -20,32 +20,6 @@
 
 ```yaml
 type: custom:energy-home-visual-card
-backgrounds:
-  full:
-    day: /local/energy-bg-full-day.png
-    night: /local/energy-bg-full-night.png
-  ev_solar:
-    day: /local/energy-bg-ev-solar-day.png
-    night: /local/energy-bg-ev-solar-night.png
-  ev_battery:
-    day: /local/energy-bg-ev-battery-day.png
-    night: /local/energy-bg-ev-battery-night.png
-  solar_battery:
-    day: /local/energy-bg-no-ev-day.png
-    night: /local/energy-bg-no-ev-night.png
-  ev_only:
-    day: /local/energy-bg-no-solar-battery-day.png
-    night: /local/energy-bg-no-solar-battery-night.png
-  solar_only:
-    day: /local/energy-bg-solar-only-day.png
-    night: /local/energy-bg-solar-only-night.png
-  battery_only:
-    day: /local/energy-bg-battery-only-day.png
-    night: /local/energy-bg-battery-only-night.png
-  base:
-    day: /local/energy-bg-base-day.png
-    night: /local/energy-bg-base-night.png
-
 show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
@@ -65,7 +39,26 @@ energy_today:
   home: sensor.home_energy_today
 ```
 
+The bundled backgrounds load automatically when the card and images are installed together through HACS or from `dist/`. Use `backgrounds` only when you want to override the provided images.
+
 See `examples/dashboard.yaml` and `examples/dashboard-no-ev.yaml` for fuller dashboard snippets.
+
+## HACS Install
+
+Add this repository as a custom HACS Dashboard/Lovelace repository, then install it:
+
+```text
+StonewallMedia/energy-home-visual-card
+```
+
+The Lovelace resource should be:
+
+```yaml
+url: /hacsfiles/energy-home-visual-card/energy-home-visual-card.js
+type: module
+```
+
+HACS installs the JavaScript module and bundled background images from `dist/`.
 
 ## Config
 
@@ -116,24 +109,13 @@ card_mod:
     }
 ```
 
-## Local Gitea Notes
+## Release
 
-This local package is staged under:
+Run this before tagging a GitHub release for HACS:
 
-```text
-gitea/StonewallMedia/energy-home-visual-card
+```bash
+npm run build
+npm run check
 ```
 
-The intended Gitea remote is:
-
-```text
-https://gitea.stonewallmedia.co.uk/StonewallMedia/energy-home-visual-card.git
-```
-
-The previous AI usage custom card source and tests were copied into:
-
-```text
-reference/ai-usage-banner-card/
-```
-
-That keeps the current card work available as a reference without mixing the two card implementations.
+Commit the generated `dist/` folder, then create a version tag such as `v0.1.0`.
