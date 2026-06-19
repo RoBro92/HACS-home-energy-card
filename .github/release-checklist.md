@@ -16,7 +16,7 @@ Before publishing a GitHub release for HACS:
 Before submitting to default HACS:
 
 - Confirm at least a few public testers have installed the latest release.
-- Confirm the resource path is `/hacsfiles/HACS-home-energy-card/dist/hacs-home-energy-card.js`.
+- Confirm the resource path is `/hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js`.
 - Confirm bundled backgrounds load on a clean install.
 - Keep the README and `info.md` focused on install, preview, and setup.
 - If HACS review requests brand metadata, use `docs/images/hacs-home-energy-card-logo.svg` as the source artwork.

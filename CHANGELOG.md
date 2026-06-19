@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+- Fixes the HACS resource path so Home Assistant loads `hacs-home-energy-card.js` from the path HACS serves.
+- Updates setup, install, preview, and public testing docs to remove the incorrect `/dist/` resource URL.
+- Keeps the packaged card and bundled background images in `dist` for HACS release discovery.
+
 ## 1.0.3
 
 - Removes the logo from the top of the main README while keeping logo assets available for HACS and brand use.

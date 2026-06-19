@@ -19,7 +19,7 @@ https://github.com/RoBro92/HACS-home-energy-card
 The Lovelace resource should be:
 
 ```yaml
-url: /hacsfiles/HACS-home-energy-card/dist/hacs-home-energy-card.js
+url: /hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js
 type: module
 ```
 
