@@ -2197,12 +2197,93 @@ const EDITOR_FIELD_DEFS = [
   { name: "battery_discharge_24h", label: "Battery Discharge 24h", path: ["detail_entities", "battery", "discharge_24h"], selector: { entity: { domain: "sensor" } } },
 ];
 
-const EDITOR_SECTIONS = [
-  ["Card", 0, 20],
-  ["Sensors", 20, 33],
-  ["Floating Node Extras", 33, 38],
-  ["Cost", 38, 43],
-  ["Detail Sensors", 43],
+const EDITOR_SECTION_GROUPS = [
+  {
+    label: "Card",
+    fields: [
+      "title",
+      "subtitle",
+      "show_ev",
+      "show_solar",
+      "show_battery",
+      "show_title",
+      "show_daily_summary",
+      "show_bottom_bar",
+      "node_detail",
+      "time_of_day",
+      "card_width",
+      "card_height",
+    ],
+  },
+  {
+    label: "Grid And Home",
+    fields: [
+      "sun",
+      "grid_label",
+      "house_label",
+      "grid_power",
+      "house_power",
+      "grid_energy_today",
+      "home_energy_today",
+      "grid_node_extra",
+      "home_node_extra",
+      "grid_import_24h",
+      "grid_export_24h",
+      "home_energy_24h",
+    ],
+  },
+  {
+    label: "Solar",
+    fields: [
+      "solar_label",
+      "solar_capacity_kw",
+      "solar_power",
+      "solar_capacity",
+      "solar_energy_today",
+      "solar_node_extra",
+      "solar_pv_voltage",
+      "solar_pv_current",
+      "solar_energy_24h",
+      "solar_energy_week",
+      "solar_energy_month",
+    ],
+  },
+  {
+    label: "EV",
+    fields: [
+      "ev_label",
+      "ev_power",
+      "ev_soc",
+      "ev_charging_state",
+      "ev_node_extra",
+      "ev_range",
+      "ev_inside_temperature",
+      "ev_odometer",
+      "ev_energy_24h",
+      "ev_energy_week",
+      "ev_lock",
+      "ev_boost",
+    ],
+  },
+  {
+    label: "Battery",
+    fields: [
+      "battery_label",
+      "battery_capacity_kwh",
+      "battery_power",
+      "battery_soc",
+      "battery_capacity",
+      "battery_node_extra",
+      "battery_voltage",
+      "battery_current",
+      "battery_charge_24h",
+      "battery_discharge_24h",
+    ],
+  },
+  {
+    label: "Cost",
+    fields: ["import_rate", "export_rate", "import_rate_entity", "export_rate_entity", "currency"],
+  },
 ];
 
 function cloneConfigForEditor(config) {
@@ -2274,6 +2355,21 @@ function editorFieldsForConfig(config, start = 0, end = EDITOR_FIELD_DEFS.length
   return EDITOR_FIELD_DEFS.slice(start, end).filter((field) => editorSystemVisible(data, editorSystemForField(field)));
 }
 
+function editorFieldByName(name) {
+  return EDITOR_FIELD_DEFS.find((field) => field.name === name);
+}
+
+function editorSectionsForConfig(config) {
+  const data = editorDataFromConfig(config);
+  return EDITOR_SECTION_GROUPS.map((section) => ({
+    label: section.label,
+    fields: section.fields
+      .map(editorFieldByName)
+      .filter(Boolean)
+      .filter((field) => editorSystemVisible(data, editorSystemForField(field))),
+  })).filter((section) => section.fields.length);
+}
+
 function editorDataToConfig(previousConfig, data) {
   const config = cloneConfigForEditor(previousConfig);
   for (const field of EDITOR_FIELD_DEFS) {
@@ -2321,17 +2417,16 @@ class HacsHomeEnergyCardEditor extends LitElement {
   render() {
     return html`
       <div class="editor">
-        ${EDITOR_SECTIONS.map(([label, start, end]) => this.renderSection(label, start, end))}
+        ${editorSectionsForConfig(this._config).map((section) => this.renderSection(section))}
       </div>
     `;
   }
 
-  renderSection(label, start, end) {
-    const fields = editorFieldsForConfig(this._config, start, end);
-    if (!fields.length) return html``;
+  renderSection(section) {
+    const fields = section.fields;
     return html`
       <section>
-        <div class="section-title">${label}</div>
+        <div class="section-title">${section.label}</div>
         <ha-form
           .hass=${this.hass}
           .data=${editorDataFromConfig(this._config)}
@@ -2380,4 +2475,4 @@ if (typeof window !== "undefined") {
   }
 }
 
-export { HacsHomeEnergyCard, editorDataFromConfig, editorDataToConfig, editorFieldsForConfig };
+export { HacsHomeEnergyCard, editorDataFromConfig, editorDataToConfig, editorFieldsForConfig, editorSectionsForConfig };

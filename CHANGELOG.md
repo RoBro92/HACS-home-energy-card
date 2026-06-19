@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.10
+
+- Regroups the visual editor into Card, Grid And Home, Solar, EV, Battery, and Cost sections.
+- Keeps all EV, Solar, and Battery fields together so users do not have to jump between generic sensor and detail sections.
+
 ## 1.0.9
 
 - Rounds odometer detail readings to the nearest whole mile while preserving the sensor unit.

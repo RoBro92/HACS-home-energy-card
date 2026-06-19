@@ -7,6 +7,7 @@ import {
   editorDataFromConfig,
   editorDataToConfig,
   editorFieldsForConfig,
+  editorSectionsForConfig,
   entityEnabled,
   flowSpeedSeconds,
   formatEnergy,
@@ -527,6 +528,42 @@ test("editorFieldsForConfig hides disabled system fields without deleting saved 
   assert.equal(next.entities.solar_power, "sensor.solar_power_w");
   assert.equal(next.detail_entities.ev.range, "sensor.ev_range");
   assert.equal(next.detail_entities.battery.voltage, "sensor.battery_voltage");
+});
+
+test("editorSectionsForConfig groups each system fields into one visual editor section", () => {
+  const sections = editorSectionsForConfig({
+    show_ev: true,
+    show_solar: true,
+    show_battery: true,
+  });
+  const namesBySection = Object.fromEntries(sections.map((section) => [section.label, section.fields.map((field) => field.name)]));
+  const allNames = sections.flatMap((section) => section.fields.map((field) => field.name));
+
+  assert.deepEqual([...new Set(allNames)].sort(), allNames.toSorted());
+  assert.deepEqual(
+    allNames.toSorted(),
+    editorFieldsForConfig({ show_ev: true, show_solar: true, show_battery: true }).map((field) => field.name).toSorted(),
+  );
+  assert.deepEqual(
+    sections.map((section) => section.label),
+    ["Card", "Grid And Home", "Solar", "EV", "Battery", "Cost"],
+  );
+  assert.ok(namesBySection.EV.includes("ev_power"));
+  assert.ok(namesBySection.EV.includes("ev_odometer"));
+  assert.ok(namesBySection.EV.includes("ev_boost"));
+  assert.ok(!namesBySection["Grid And Home"].some((name) => name.startsWith("ev_")));
+  assert.ok(namesBySection.Solar.includes("solar_power"));
+  assert.ok(namesBySection.Solar.includes("solar_pv_voltage"));
+  assert.ok(!namesBySection.Cost.some((name) => name.startsWith("solar_") || name.startsWith("ev_")));
+  assert.ok(namesBySection.Battery.includes("battery_power"));
+  assert.ok(namesBySection.Battery.includes("battery_discharge_24h"));
+
+  const disabledSections = editorSectionsForConfig({
+    show_ev: false,
+    show_solar: false,
+    show_battery: false,
+  }).map((section) => section.label);
+  assert.deepEqual(disabledSections, ["Card", "Grid And Home", "Cost"]);
 });
 
 test("selectBackground prefers setup and time-specific background variants", () => {
