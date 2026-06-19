@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.8
+
+- Hides solar, EV, and battery related visual editor fields when their matching `show_*` toggle is set to `false`.
+- Preserves hidden YAML values so users can turn a system back on without re-entering sensors.
+
 ## 1.0.7
 
 - Adds automatic detail panel controls for lock, switch, button, and input button entities added under `detail_entities`.

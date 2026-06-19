@@ -2237,6 +2237,31 @@ function editorDataFromConfig(config) {
   return data;
 }
 
+const EDITOR_SYSTEM_TOGGLES = {
+  solar: "show_solar",
+  ev: "show_ev",
+  battery: "show_battery",
+};
+
+function editorSystemForField(field) {
+  if (Object.values(EDITOR_SYSTEM_TOGGLES).includes(field.name)) return null;
+  if (field.system) return field.system;
+  for (const system of Object.keys(EDITOR_SYSTEM_TOGGLES)) {
+    if (field.name.startsWith(`${system}_`) || field.path.includes(system)) return system;
+  }
+  return null;
+}
+
+function editorSystemVisible(data, system) {
+  if (!system) return true;
+  return data[EDITOR_SYSTEM_TOGGLES[system]] !== false;
+}
+
+function editorFieldsForConfig(config, start = 0, end = EDITOR_FIELD_DEFS.length) {
+  const data = editorDataFromConfig(config);
+  return EDITOR_FIELD_DEFS.slice(start, end).filter((field) => editorSystemVisible(data, editorSystemForField(field)));
+}
+
 function editorDataToConfig(previousConfig, data) {
   const config = cloneConfigForEditor(previousConfig);
   for (const field of EDITOR_FIELD_DEFS) {
@@ -2290,7 +2315,8 @@ class HacsHomeEnergyCardEditor extends LitElement {
   }
 
   renderSection(label, start, end) {
-    const fields = EDITOR_FIELD_DEFS.slice(start, end);
+    const fields = editorFieldsForConfig(this._config, start, end);
+    if (!fields.length) return html``;
     return html`
       <section>
         <div class="section-title">${label}</div>
@@ -2342,4 +2368,4 @@ if (typeof window !== "undefined") {
   }
 }
 
-export { HacsHomeEnergyCard, editorDataFromConfig, editorDataToConfig };
+export { HacsHomeEnergyCard, editorDataFromConfig, editorDataToConfig, editorFieldsForConfig };

@@ -6,6 +6,7 @@ import {
   HacsHomeEnergyCard,
   editorDataFromConfig,
   editorDataToConfig,
+  editorFieldsForConfig,
   entityEnabled,
   flowSpeedSeconds,
   formatEnergy,
@@ -486,6 +487,46 @@ test("editor mapping exposes native selector data and preserves unrelated config
   assert.equal(next.time_of_day, undefined);
   assert.equal(next.entities.grid_power, "sensor.grid_power_w");
   assert.equal(next.detail_entities.solar.pv_voltage, "sensor.solar_pv_voltage");
+});
+
+test("editorFieldsForConfig hides disabled system fields without deleting saved YAML", () => {
+  const config = {
+    show_ev: false,
+    show_solar: false,
+    show_battery: false,
+    solar_capacity_kw: 5,
+    battery_capacity_kwh: 13.5,
+    entities: {
+      grid_power: "sensor.grid_power_w",
+      house_power: "sensor.house_power_w",
+      solar_power: "sensor.solar_power_w",
+      ev_power: "sensor.ev_power_w",
+      battery_power: "sensor.battery_power_w",
+    },
+    detail_entities: {
+      solar: { pv_voltage: "sensor.solar_pv_voltage" },
+      ev: { range: "sensor.ev_range" },
+      battery: { voltage: "sensor.battery_voltage" },
+    },
+  };
+
+  const visibleNames = editorFieldsForConfig(config).map((field) => field.name);
+
+  assert.ok(visibleNames.includes("show_solar"));
+  assert.ok(visibleNames.includes("grid_power"));
+  assert.ok(visibleNames.includes("house_power"));
+  assert.ok(!visibleNames.includes("solar_power"));
+  assert.ok(!visibleNames.includes("solar_capacity_kw"));
+  assert.ok(!visibleNames.includes("solar_pv_voltage"));
+  assert.ok(!visibleNames.includes("ev_power"));
+  assert.ok(!visibleNames.includes("ev_range"));
+  assert.ok(!visibleNames.includes("battery_power"));
+  assert.ok(!visibleNames.includes("battery_voltage"));
+
+  const next = editorDataToConfig(config, editorDataFromConfig(config));
+  assert.equal(next.entities.solar_power, "sensor.solar_power_w");
+  assert.equal(next.detail_entities.ev.range, "sensor.ev_range");
+  assert.equal(next.detail_entities.battery.voltage, "sensor.battery_voltage");
 });
 
 test("selectBackground prefers setup and time-specific background variants", () => {
