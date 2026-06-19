@@ -26,7 +26,7 @@ const hass = {
     "sensor.ev_soc": { state: "62" },
     "sensor.ev_range": { state: "214", attributes: { unit_of_measurement: "mi" } },
     "sensor.ev_inside_temperature": { state: "21.5", attributes: { unit_of_measurement: "°C" } },
-    "sensor.ev_odometer": { state: "12842", attributes: { unit_of_measurement: "mi" } },
+    "sensor.ev_odometer": { state: "12842.6", attributes: { unit_of_measurement: "mi" } },
     "binary_sensor.ev_charging": { state: "on" },
     "lock.ev": { state: "locked", attributes: { friendly_name: "EV Lock" } },
     "switch.ev_boost": { state: "off", attributes: { friendly_name: "EV Boost" } },
@@ -189,7 +189,7 @@ test("buildEnergyModel turns extra detail sensors into rows and controllable ent
   assert.ok(rowLabels.includes("Inside Temperature"));
   assert.ok(rowLabels.includes("Odometer"));
   assert.equal(rowValues.Range, "214 mi");
-  assert.equal(rowValues.Odometer, "12842 mi");
+  assert.equal(rowValues.Odometer, "12843 mi");
   assert.ok(actionLabels.includes("Unlock"));
   assert.ok(actionLabels.includes("Boost"));
   assert.equal(model.actions.ev.find((action) => action.label === "Unlock").service, "lock.unlock");

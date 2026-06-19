@@ -613,9 +613,21 @@ function configuredDetailRows(config, hass, group) {
   return detailEntityEntries(config, group)
     .filter((entry) => !isControlDetailEntry(entry))
     .map((entry) =>
-      detailRow(entry.label || labelFromDetailKey(entry.key), entityDisplayValue(hass, entry.entity), entry.entity),
+      detailRow(entry.label || labelFromDetailKey(entry.key), detailEntityDisplayValue(hass, entry), entry.entity),
     )
     .filter(Boolean);
+}
+
+function detailEntityDisplayValue(hass, entry) {
+  const key = String(entry?.key || entry?.label || "").toLowerCase();
+  if (!key.includes("odometer")) return entityDisplayValue(hass, entry.entity);
+
+  const parsed = parseNumber(stateValue(hass, entry.entity));
+  if (parsed === null) return entityDisplayValue(hass, entry.entity);
+
+  const unit = stateAttributes(hass, entry.entity).unit_of_measurement;
+  const rounded = String(Math.round(parsed));
+  return unit ? `${rounded} ${unit}` : rounded;
 }
 
 function buildDetailGroups(config, hass, model, energyToday) {

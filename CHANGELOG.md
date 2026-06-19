@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.9
+
+- Rounds odometer detail readings to the nearest whole mile while preserving the sensor unit.
+
 ## 1.0.8
 
 - Hides solar, EV, and battery related visual editor fields when their matching `show_*` toggle is set to `false`.
