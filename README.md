@@ -48,13 +48,13 @@ See `examples/dashboard.yaml` and `examples/dashboard-no-ev.yaml` for fuller das
 Add this repository as a custom HACS Dashboard/Lovelace repository, then install it:
 
 ```text
-StonewallMedia/energy-home-visual-card
+RoBro92/HACS-home-energy-card
 ```
 
 The Lovelace resource should be:
 
 ```yaml
-url: /hacsfiles/energy-home-visual-card/energy-home-visual-card.js
+url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
 type: module
 ```
 
@@ -118,4 +118,4 @@ npm run build
 npm run check
 ```
 
-Commit the generated `dist/` folder, then create a version tag such as `v0.1.0`.
+Commit the generated `dist/` folder, push to `RoBro92/HACS-home-energy-card`, then create a version tag such as `v0.1.0`.

@@ -1,5 +1,5 @@
 {
-  "name": "energy-home-visual-card",
+  "name": "hacs-home-energy-card",
   "version": "0.1.0",
   "description": "A cinematic Home Assistant Lovelace energy flow card.",
   "type": "module",
@@ -24,10 +24,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/StonewallMedia/energy-home-visual-card.git"
+    "url": "https://github.com/RoBro92/HACS-home-energy-card.git"
   },
   "bugs": {
-    "url": "https://github.com/StonewallMedia/energy-home-visual-card/issues"
+    "url": "https://github.com/RoBro92/HACS-home-energy-card/issues"
   },
-  "homepage": "https://github.com/StonewallMedia/energy-home-visual-card#readme"
+  "homepage": "https://github.com/RoBro92/HACS-home-energy-card#readme"
 }

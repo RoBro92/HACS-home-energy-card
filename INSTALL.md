@@ -32,13 +32,13 @@
 3. In HACS, add it as a custom Dashboard/Lovelace repository:
 
    ```text
-   StonewallMedia/energy-home-visual-card
+   RoBro92/HACS-home-energy-card
    ```
 
 4. Install it and add the resource if HACS does not add it automatically:
 
    ```yaml
-   url: /hacsfiles/energy-home-visual-card/energy-home-visual-card.js
+   url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
    type: module
    ```
 
@@ -46,7 +46,7 @@
 
 The bundled images load automatically from the same folder as `energy-home-visual-card.js`.
 
-- HACS path: `/hacsfiles/energy-home-visual-card/energy-bg-*.png`
+- HACS path: `/hacsfiles/HACS-home-energy-card/energy-bg-*.png`
 - Manual path: `/local/energy-home-visual-card/energy-bg-*.png`
 
 You can override paths in YAML with the `backgrounds` object. The older `background_full` and `background_no_ev` keys still work as fallbacks.
