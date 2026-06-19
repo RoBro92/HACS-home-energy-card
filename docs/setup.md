@@ -31,6 +31,18 @@ In a Home Assistant dashboard:
 
 The `show_ev`, `show_solar`, and `show_battery` fields accept either `true`/`false` or a helper entity such as `input_boolean.has_ev`. Helper entities are useful when you want one dashboard card to adapt to different homes.
 
+## Visual Layout Options
+
+The default layout keeps the background clear: floating nodes show compact live values, the bottom bar shows live status, and the top daily summary is hidden.
+
+Clicking a floating node or bottom-bar item opens an in-card detail panel. The default rows show the core value for that group, and `detail_entities` adds extra rows such as voltage, current, and longer energy totals. Rows backed by entities still open the Home Assistant more-info dialog when clicked.
+
+| Field | Default | Notes |
+| --- | --- | --- |
+| `show_daily_summary` | `false` | Set to `true` to restore the top daily kWh strip. |
+| `show_bottom_bar` | `true` | Set to `false` for a cleaner image-only card. |
+| `node_detail` | `minimal` | Use `full` if floating nodes should also show status text. |
+
 ## Required Sensors
 
 Only these two sensors are always required:
@@ -58,6 +70,18 @@ solar_power / solar_capacity * 100
 
 For example, `4500 W` production on a `5 kW` array displays `90%`.
 
+Solar modal detail rows can be added with:
+
+```yaml
+detail_entities:
+  solar:
+    pv_voltage: sensor.solar_pv_voltage
+    pv_current: sensor.solar_pv_current
+    energy_24h: sensor.solar_energy_24h
+    energy_week: sensor.solar_energy_week
+    energy_month: sensor.solar_energy_month
+```
+
 ## Optional Battery Sensors
 
 Enable battery with `show_battery: true` or an entity that is on.
@@ -69,6 +93,17 @@ Enable battery with `show_battery: true` or an entity that is on.
 | `battery_capacity_kwh` | kWh | Fixed battery capacity, for example `13.5`. |
 | `entities.battery_capacity` | kWh or Wh | Optional sensor alternative to `battery_capacity_kwh`. |
 
+Battery modal detail rows can be added with:
+
+```yaml
+detail_entities:
+  battery:
+    voltage: sensor.battery_voltage
+    current: sensor.battery_current
+    charge_24h: sensor.battery_charge_24h
+    discharge_24h: sensor.battery_discharge_24h
+```
+
 ## Optional EV Sensors
 
 Enable EV with `show_ev: true` or an entity that is on.
@@ -78,6 +113,32 @@ Enable EV with `show_ev: true` or an entity that is on.
 | `entities.ev_power` | W | Current EV charge power. Negative values are treated as vehicle-to-home discharge. |
 | `entities.ev_soc` | % | EV state of charge. |
 | `entities.ev_charging_state` | state or binary | `on`, `true`, or `charging` displays as charging. `off`, `false`, or `not_charging` displays as not charging. Other states are shown as readable text. |
+
+EV modal detail rows can be added with:
+
+```yaml
+detail_entities:
+  ev:
+    voltage: sensor.ev_voltage
+    current: sensor.ev_current
+    energy_24h: sensor.ev_energy_24h
+    energy_week: sensor.ev_energy_week
+```
+
+## Optional Grid And Home Detail Sensors
+
+```yaml
+detail_entities:
+  grid:
+    import_24h: sensor.grid_import_24h
+    export_24h: sensor.grid_export_24h
+  house:
+    energy_24h: sensor.home_energy_24h
+    energy_week: sensor.home_energy_week
+    energy_month: sensor.home_energy_month
+```
+
+The card also accepts custom keys under each detail group. Unknown keys are converted into readable labels, so `inverter_temperature` displays as `Inverter Temperature`.
 
 ## Day And Night Image Switching
 
@@ -109,6 +170,9 @@ show_battery: input_boolean.has_battery
 
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
+show_daily_summary: false
+show_bottom_bar: true
+node_detail: minimal
 
 entities:
   sun: sun.sun
@@ -125,6 +189,27 @@ energy_today:
   grid: sensor.grid_energy_today
   solar: sensor.solar_energy_today
   home: sensor.home_energy_today
+
+detail_entities:
+  solar:
+    pv_voltage: sensor.solar_pv_voltage
+    pv_current: sensor.solar_pv_current
+    energy_week: sensor.solar_energy_week
+    energy_month: sensor.solar_energy_month
+  grid:
+    import_24h: sensor.grid_import_24h
+    export_24h: sensor.grid_export_24h
+  house:
+    energy_24h: sensor.home_energy_24h
+  ev:
+    energy_24h: sensor.ev_energy_24h
+    voltage: sensor.ev_voltage
+    current: sensor.ev_current
+  battery:
+    voltage: sensor.battery_voltage
+    current: sensor.battery_current
+    charge_24h: sensor.battery_charge_24h
+    discharge_24h: sensor.battery_discharge_24h
 ```
 
 ## No EV Example

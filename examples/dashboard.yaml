@@ -6,6 +6,9 @@ show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
+show_daily_summary: false
+show_bottom_bar: true
+node_detail: minimal
 
 entities:
   sun: sun.sun
@@ -22,6 +25,27 @@ energy_today:
   grid: sensor.grid_energy_today
   solar: sensor.solar_energy_today
   home: sensor.home_energy_today
+
+detail_entities:
+  solar:
+    pv_voltage: sensor.solar_pv_voltage
+    pv_current: sensor.solar_pv_current
+    energy_week: sensor.solar_energy_week
+    energy_month: sensor.solar_energy_month
+  grid:
+    import_24h: sensor.grid_import_24h
+    export_24h: sensor.grid_export_24h
+  house:
+    energy_24h: sensor.home_energy_24h
+  ev:
+    energy_24h: sensor.ev_energy_24h
+    voltage: sensor.ev_voltage
+    current: sensor.ev_current
+  battery:
+    voltage: sensor.battery_voltage
+    current: sensor.battery_current
+    charge_24h: sensor.battery_charge_24h
+    discharge_24h: sensor.battery_discharge_24h
 
 card_mod:
   style: |

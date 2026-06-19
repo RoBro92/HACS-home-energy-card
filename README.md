@@ -11,10 +11,11 @@
 - Visual card editor support for the main setup options and sensor entity IDs.
 - Configurable entity IDs for power, energy summary, battery SOC, EV SOC, EV charging state, and solar efficiency.
 - Animated SVG flow overlays for grid, solar, EV, and battery.
+- Subtle directional particles show energy transfer without adding more panels.
 - Animation speed scales with the current power value.
 - Import/export and charge/discharge direction handling.
 - Bottom status bar with Electricity, Solar, Electric Vehicle, and Battery pills.
-- Tap/click on major elements opens the relevant entity more-info dialog.
+- Tap/click on major elements opens an in-card detail panel with optional extra sensors.
 - Uses CSS variables so `card-mod` can override sizing, radius, colors, and shadow.
 
 ## Basic Usage
@@ -26,6 +27,9 @@ show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
+show_daily_summary: false
+show_bottom_bar: true
+node_detail: minimal
 
 entities:
   sun: sun.sun
@@ -42,6 +46,13 @@ energy_today:
   grid: sensor.grid_energy_today
   solar: sensor.solar_energy_today
   home: sensor.home_energy_today
+
+detail_entities:
+  solar:
+    pv_voltage: sensor.solar_pv_voltage
+    pv_current: sensor.solar_pv_current
+    energy_week: sensor.solar_energy_week
+    energy_month: sensor.solar_energy_month
 ```
 
 The bundled backgrounds load automatically when the card and images are installed together through HACS or from `dist/`. Use `backgrounds` only when you want to override the provided images.
@@ -84,6 +95,9 @@ HACS installs the JavaScript module and bundled background images from `dist/`.
 | `show_battery` | No | Boolean or entity. Defaults to visible. |
 | `solar_capacity_kw` | No | Solar install capacity in kW. Used to calculate solar efficiency. |
 | `battery_capacity_kwh` | No | Battery capacity in kWh. |
+| `show_daily_summary` | No | Shows the top daily kWh summary strip when true. Defaults to false. |
+| `show_bottom_bar` | No | Shows the bottom live-status bar when true. Defaults to true. |
+| `node_detail` | No | `minimal` shows compact floating nodes. `full` adds status text to nodes. |
 | `entities.sun` | No | Sun entity for day/night switching. Defaults to `sun.sun`; falls back to local time if unavailable. |
 | `entities.grid_power` | Yes | Current grid power in W. Positive is importing, negative is exporting. |
 | `entities.solar_power` | When solar shown | Current solar production in W. |
@@ -98,6 +112,7 @@ HACS installs the JavaScript module and bundled background images from `dist/`.
 | `energy_today.grid` | No | Daily grid energy sensor in kWh. |
 | `energy_today.solar` | No | Daily solar energy sensor in kWh. |
 | `energy_today.home` | No | Daily home energy sensor in kWh. |
+| `detail_entities.<group>.<key>` | No | Extra rows shown in the in-card detail modal. Groups are `grid`, `solar`, `house`, `ev`, and `battery`. |
 
 ## Background Selection
 

@@ -107,7 +107,8 @@
             "mdi:transmission-tower": "⌁",
             "mdi:solar-power-variant": "☀",
             "mdi:car-electric": "⚡",
-            "mdi:home-battery": "▰"
+            "mdi:home-battery": "▰",
+            "mdi:home": "⌂"
           };
           const glyph = icons[this.getAttribute("icon")] || "•";
           this.shadowRoot || this.attachShadow({ mode: "open" });
@@ -130,7 +131,7 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../energy-home-visual-card.js?v=preview-13");
+      await import("../energy-home-visual-card.js?v=preview-14");
 
       const card = document.querySelector("energy-home-visual-card");
       const evToggle = document.querySelector("#evToggle");
@@ -187,11 +188,15 @@
         show_ev: "input_boolean.has_ev",
         show_solar: "input_boolean.has_solar",
         show_battery: "input_boolean.has_battery",
+        solar_capacity_kw: 5,
+        battery_capacity_kwh: 13.5,
         entities: {
           grid_power: "sensor.grid_power_w",
           solar_power: "sensor.solar_power_w",
           house_power: "sensor.house_power_w",
           ev_power: "sensor.ev_charging_power_w",
+          ev_soc: "sensor.ev_soc",
+          ev_charging_state: "binary_sensor.ev_charging",
           battery_power: "sensor.battery_power_w",
           battery_soc: "sensor.battery_soc"
         },
@@ -199,6 +204,35 @@
           grid: "sensor.grid_energy_today",
           solar: "sensor.solar_energy_today",
           home: "sensor.home_energy_today"
+        },
+        detail_entities: {
+          solar: {
+            pv_voltage: "sensor.solar_pv_voltage",
+            pv_current: "sensor.solar_pv_current",
+            energy_week: "sensor.solar_energy_week",
+            energy_month: "sensor.solar_energy_month"
+          },
+          grid: {
+            import_24h: "sensor.grid_import_24h",
+            export_24h: "sensor.grid_export_24h"
+          },
+          house: {
+            energy_24h: "sensor.home_energy_24h",
+            energy_week: "sensor.home_energy_week",
+            energy_month: "sensor.home_energy_month"
+          },
+          ev: {
+            energy_24h: "sensor.ev_energy_24h",
+            energy_week: "sensor.ev_energy_week",
+            voltage: "sensor.ev_voltage",
+            current: "sensor.ev_current"
+          },
+          battery: {
+            voltage: "sensor.battery_voltage",
+            current: "sensor.battery_current",
+            charge_24h: "sensor.battery_charge_24h",
+            discharge_24h: "sensor.battery_discharge_24h"
+          }
         }
       });
 
@@ -227,11 +261,30 @@
             "sensor.solar_power_w": sensor(Math.round(solar)),
             "sensor.house_power_w": sensor(Math.round(house)),
             "sensor.ev_charging_power_w": sensor(Math.round(ev)),
+            "sensor.ev_soc": sensor(64 + Math.round(Math.sin(state.phase / 4) * 3), { unit_of_measurement: "%" }),
+            "binary_sensor.ev_charging": sensor(state.showEv && ev > 100 ? "on" : "off"),
             "sensor.battery_power_w": sensor(Math.round(battery)),
             "sensor.battery_soc": sensor(Math.round(batterySoc)),
             "sensor.grid_energy_today": sensor("7.8"),
             "sensor.solar_energy_today": sensor("22.4"),
             "sensor.home_energy_today": sensor("15.9"),
+            "sensor.solar_pv_voltage": sensor("384", { unit_of_measurement: "V" }),
+            "sensor.solar_pv_current": sensor("11.9", { unit_of_measurement: "A" }),
+            "sensor.solar_energy_week": sensor("118.3", { unit_of_measurement: "kWh" }),
+            "sensor.solar_energy_month": sensor("432.1", { unit_of_measurement: "kWh" }),
+            "sensor.grid_import_24h": sensor("9.6", { unit_of_measurement: "kWh" }),
+            "sensor.grid_export_24h": sensor("2.1", { unit_of_measurement: "kWh" }),
+            "sensor.home_energy_24h": sensor("15.9", { unit_of_measurement: "kWh" }),
+            "sensor.home_energy_week": sensor("103.4", { unit_of_measurement: "kWh" }),
+            "sensor.home_energy_month": sensor("421.6", { unit_of_measurement: "kWh" }),
+            "sensor.ev_energy_24h": sensor("18.2", { unit_of_measurement: "kWh" }),
+            "sensor.ev_energy_week": sensor("42.8", { unit_of_measurement: "kWh" }),
+            "sensor.ev_voltage": sensor("238", { unit_of_measurement: "V" }),
+            "sensor.ev_current": sensor("29.4", { unit_of_measurement: "A" }),
+            "sensor.battery_voltage": sensor("51.8", { unit_of_measurement: "V" }),
+            "sensor.battery_current": sensor("18.1", { unit_of_measurement: "A" }),
+            "sensor.battery_charge_24h": sensor("6.4", { unit_of_measurement: "kWh" }),
+            "sensor.battery_discharge_24h": sensor("7.2", { unit_of_measurement: "kWh" }),
             "input_boolean.has_ev": sensor(state.showEv ? "on" : "off"),
             "input_boolean.has_solar": sensor(state.showSolar ? "on" : "off"),
             "input_boolean.has_battery": sensor(state.showBattery ? "on" : "off"),

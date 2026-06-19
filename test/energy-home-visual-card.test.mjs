@@ -26,6 +26,10 @@ const hass = {
     "sensor.battery_soc": { state: "86" },
     "sensor.battery_capacity_kwh": { state: "13.5", attributes: { unit_of_measurement: "kWh" } },
     "sensor.solar_capacity_kw": { state: "5", attributes: { unit_of_measurement: "kW" } },
+    "sensor.solar_pv_voltage": { state: "384", attributes: { unit_of_measurement: "V" } },
+    "sensor.solar_pv_current": { state: "11.9", attributes: { unit_of_measurement: "A" } },
+    "sensor.solar_energy_week": { state: "118.3", attributes: { unit_of_measurement: "kWh" } },
+    "sensor.solar_energy_month": { state: "432.1", attributes: { unit_of_measurement: "kWh" } },
     "sensor.grid_energy_today": { state: "8.4" },
     "sensor.solar_energy_today": { state: "21.6" },
     "sensor.home_energy_today": { state: "14.2" },
@@ -106,10 +110,21 @@ test("buildEnergyModel derives display values, directions, background, and visib
         solar: "sensor.solar_energy_today",
         home: "sensor.home_energy_today",
       },
+      detail_entities: {
+        solar: {
+          pv_voltage: "sensor.solar_pv_voltage",
+          pv_current: "sensor.solar_pv_current",
+          energy_week: "sensor.solar_energy_week",
+          energy_month: "sensor.solar_energy_month",
+        },
+      },
     },
     hass,
   );
 
+  assert.equal(model.showDailySummary, false);
+  assert.equal(model.showStatusBar, true);
+  assert.equal(model.nodeDetail, "minimal");
   assert.match(model.background, /energy-bg-full-night\.png$/);
   assert.equal(model.visible.ev, true);
   assert.equal(model.visible.solar, true);
@@ -129,7 +144,38 @@ test("buildEnergyModel derives display values, directions, background, and visib
   assert.equal(model.battery.capacityLabel, "13.5 kWh");
   assert.equal(model.battery.statusLabel, "discharging / 86% / 13.5 kWh");
   assert.equal(model.energyToday.solar, "21.6 kWh");
+  assert.deepEqual(
+    model.details.solar.map((row) => [row.label, row.value, row.entityId]),
+    [
+      ["Solar power", "4.6 kW", "sensor.solar_power_w"],
+      ["Efficiency", "91%", undefined],
+      ["Generated today", "21.6 kWh", "sensor.solar_energy_today"],
+      ["PV voltage", "384 V", "sensor.solar_pv_voltage"],
+      ["PV current", "11.9 A", "sensor.solar_pv_current"],
+      ["Generated this week", "118.3 kWh", "sensor.solar_energy_week"],
+      ["Generated this month", "432.1 kWh", "sensor.solar_energy_month"],
+    ],
+  );
   assert.equal(Object.hasOwn(model, "weather"), false);
+});
+
+test("buildEnergyModel exposes optional visual layers from config", () => {
+  const model = buildEnergyModel(
+    {
+      show_daily_summary: true,
+      show_bottom_bar: false,
+      node_detail: "full",
+      entities: {
+        grid_power: "sensor.grid_power_w",
+        house_power: "sensor.house_power_w",
+      },
+    },
+    hass,
+  );
+
+  assert.equal(model.showDailySummary, true);
+  assert.equal(model.showStatusBar, false);
+  assert.equal(model.nodeDetail, "full");
 });
 
 test("buildEnergyModel calculates solar efficiency from configured capacity", () => {
