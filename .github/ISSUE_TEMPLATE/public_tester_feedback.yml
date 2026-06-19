@@ -1,0 +1,53 @@
+name: Public tester feedback
+description: Share install results, setup feedback, or rough edges.
+title: "[Tester feedback]: "
+labels: ["public testing"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this for general testing feedback, even if nothing is broken.
+  - type: input
+    id: card_version
+    attributes:
+      label: Card version tested
+      placeholder: v1.0.2
+    validations:
+      required: true
+  - type: dropdown
+    id: install_result
+    attributes:
+      label: Install result
+      options:
+        - Installed and rendered correctly
+        - Installed but needed manual resource changes
+        - Installed but did not render correctly
+        - Could not install
+    validations:
+      required: true
+  - type: checkboxes
+    id: setup
+    attributes:
+      label: Home setup tested
+      options:
+        - label: Grid
+        - label: Solar
+        - label: Battery
+        - label: EV
+        - label: Day and night switching
+        - label: Detail panels
+        - label: Custom bottom bar
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Feedback
+      description: What was confusing, missing, or especially useful?
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Optional config sample
+      render: yaml
+    validations:
+      required: false

@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a problem with the card.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing HACS Home Energy Card. Please include enough detail to reproduce the issue.
+  - type: input
+    id: card_version
+    attributes:
+      label: Card version
+      description: The installed release, for example v1.0.2.
+      placeholder: v1.0.2
+    validations:
+      required: true
+  - type: input
+    id: home_assistant_version
+    attributes:
+      label: Home Assistant version
+      placeholder: 2026.6.0
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the visible problem and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Card YAML
+      description: Paste the relevant card config. Remove private entity names if needed.
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Browser console errors
+      description: Paste any browser console errors from Home Assistant.
+      render: text
+    validations:
+      required: false
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag in a screenshot if the problem is visual.
+    validations:
+      required: false

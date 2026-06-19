@@ -1,8 +1,24 @@
 # HACS Home Energy Card
 
-HACS Home Energy Card is a Home Assistant Lovelace custom card for cinematic energy monitoring. It places animated power direction paths over a high quality home energy background and renders live values for grid, solar, house load, EV charging, battery state, and daily energy.
+<p align="center">
+  <img src="docs/images/hacs-home-energy-card-logo.png" alt="HACS Home Energy Card logo" width="120">
+</p>
+
+HACS Home Energy Card is a Home Assistant dashboard card for cinematic home energy monitoring. It shows grid import and export, solar production, home load, EV charging, battery state, day and night backgrounds, animated energy direction, detail panels, and configurable glance cards.
 
 [![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RoBro92&repository=HACS-home-energy-card&category=dashboard)
+
+![HACS Home Energy Card preview](docs/images/card-preview.png)
+
+## Public Testing
+
+Public testers can add this as a HACS custom Dashboard repository. Please use the latest release and report install notes through [GitHub Issues](https://github.com/RoBro92/HACS-home-energy-card/issues).
+
+Testing guide:
+
+- [Public testing notes](docs/public-testing.md)
+- [Setup guide](docs/setup.md)
+- [Brand assets](docs/brand-assets.md)
 
 ## Install
 
@@ -19,7 +35,7 @@ url: /hacsfiles/HACS-home-energy-card/dist/hacs-home-energy-card.js
 type: module
 ```
 
-HACS installs the card and bundled background images automatically.
+HACS installs the card and bundled background images automatically. Hard refresh Home Assistant after installing or updating.
 
 ## Preview
 

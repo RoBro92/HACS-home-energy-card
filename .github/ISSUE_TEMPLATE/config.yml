@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Setup guide
+    url: https://github.com/RoBro92/HACS-home-energy-card/blob/main/docs/setup.md
+    about: Check the full setup guide before opening an issue.

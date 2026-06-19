@@ -1,6 +1,6 @@
 {
   "name": "hacs-home-energy-card",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A cinematic Home Assistant Lovelace energy flow card.",
   "type": "module",
   "scripts": {
@@ -12,7 +12,11 @@
     "home-assistant",
     "lovelace",
     "custom-card",
-    "energy"
+    "energy",
+    "dashboard",
+    "solar",
+    "battery",
+    "ev"
   ],
   "license": "MIT",
   "files": [

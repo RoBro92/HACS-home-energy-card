@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2
+
+- Adds HACS validation workflow for default HACS readiness.
+- Adds public tester issue templates and setup notes.
+- Adds local logo artwork for the README and HACS detail view.
+- Tightens the HACS preview content and repository metadata for public testing.
+
 ## 1.0.1
 
 - Fixes bundled background loading for HACS installs that serve the card JavaScript from the repository root while images are stored in `dist`.

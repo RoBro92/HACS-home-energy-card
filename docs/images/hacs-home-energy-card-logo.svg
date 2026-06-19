@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">HACS Home Energy Card logo</title>
+  <desc id="desc">A dark home energy icon with a house, solar pulse, grid line, battery, and cyan energy path.</desc>
+  <defs>
+    <linearGradient id="bg" x1="64" y1="40" x2="448" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06151c"/>
+      <stop offset=".48" stop-color="#0b2530"/>
+      <stop offset="1" stop-color="#02080d"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="92" y1="322" x2="424" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5ef2a1"/>
+      <stop offset=".52" stop-color="#58d5ff"/>
+      <stop offset="1" stop-color="#ffd15a"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.35 0 0 0 0 0.84 0 0 0 0 1 0 0 0 .85 0"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <circle cx="392" cy="116" r="42" fill="#ffd15a" opacity=".92"/>
+  <path d="M92 318 C148 286 172 326 224 286 S314 202 420 194" fill="none" stroke="url(#flow)" stroke-width="22" stroke-linecap="round" filter="url(#glow)"/>
+  <path d="M128 250 L256 152 L384 250" fill="none" stroke="#e9f8ff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M164 242 V382 H348 V242" fill="none" stroke="#e9f8ff" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M226 382 V300 H286 V382" fill="none" stroke="#e9f8ff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+  <path d="M94 374 H151 M112 344 H151 M130 314 H151" stroke="#5ef2a1" stroke-width="16" stroke-linecap="round" opacity=".92"/>
+  <rect x="328" y="324" width="74" height="44" rx="11" fill="none" stroke="#56f0d0" stroke-width="14"/>
+  <path d="M406 338 H420 V354 H406" fill="#56f0d0"/>
+  <path d="M346 347 H384" stroke="#56f0d0" stroke-width="12" stroke-linecap="round"/>
+</svg>
