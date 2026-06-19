@@ -11,7 +11,7 @@
    RoBro92/HACS-home-energy-card
    ```
 
-3. Install `HACS-home-energy-card`.
+3. Install HACS Home Energy Card.
 4. Confirm the Lovelace resource exists:
 
    ```yaml
@@ -57,4 +57,4 @@ Use `backgrounds` only if you want to override the bundled images.
 
 ## Setup
 
-See [docs/setup.md](docs/setup.md) for the full sensor list, sizing options, bottom-bar options, detail panels, and day/night switching.
+See [docs/setup.md](docs/setup.md) for the full sensor list, sizing options, bottom bar options, detail panels, and day and night switching.

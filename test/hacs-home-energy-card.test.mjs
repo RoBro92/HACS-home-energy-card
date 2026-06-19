@@ -183,6 +183,30 @@ test("flowSpeedSeconds makes stronger power flows animate faster with sane bound
   assert.equal(flowSpeedSeconds(9000), 1.2);
 });
 
+test("renderFlows marks active energy paths with visible animated pulse elements", () => {
+  const model = buildEnergyModel(
+    {
+      show_ev: true,
+      show_solar: true,
+      show_battery: true,
+      entities: {
+        grid_power: "sensor.grid_power_w",
+        solar_power: "sensor.solar_power_w",
+        house_power: "sensor.house_power_w",
+        ev_power: "sensor.ev_power_w",
+        battery_power: "sensor.battery_power_w",
+      },
+    },
+    hass,
+  );
+  const card = new HacsHomeEnergyCard();
+
+  const markup = String(card.renderFlows(model));
+
+  assert.match(markup, /flow-line is-active/);
+  assert.match(markup, /flow-pulse/);
+});
+
 test("buildEnergyModel derives display values, directions, background, and visibility", () => {
   const model = buildEnergyModel(
     {

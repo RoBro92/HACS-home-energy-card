@@ -974,30 +974,39 @@ class HacsHomeEnergyCard extends LitElement {
       width: 100%;
       height: 100%;
       overflow: visible;
-      filter: drop-shadow(0 0 10px rgba(92, 226, 255, .34));
+      z-index: 1;
+      filter: drop-shadow(0 0 14px rgba(92, 226, 255, .42));
       pointer-events: none;
     }
 
     .flow-base {
       fill: none;
-      stroke: rgba(230, 247, 255, .18);
-      stroke-width: 1.2;
+      stroke: rgba(230, 247, 255, .26);
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      vector-effect: non-scaling-stroke;
     }
 
     .flow-line {
       fill: none;
       stroke: var(--flow-color);
-      stroke-width: 1.65;
+      stroke-width: 2.8;
       stroke-linecap: round;
-      stroke-dasharray: 1.2 6;
+      stroke-dasharray: 9 12;
       animation: flow var(--flow-speed, 4s) linear infinite;
-      opacity: .95;
+      opacity: .9;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .flow-line.is-active {
+      opacity: 1;
+      filter: drop-shadow(0 0 6px var(--flow-color));
     }
 
     .flow-line.is-idle {
       animation: none;
-      opacity: .18;
-      stroke-dasharray: 1 9;
+      opacity: .24;
+      stroke-dasharray: 1 10;
     }
 
     .flow-line.is-reverse {
@@ -1012,12 +1021,20 @@ class HacsHomeEnergyCard extends LitElement {
 
     .flow-particle {
       fill: var(--flow-color);
-      opacity: .92;
-      filter: drop-shadow(0 0 7px var(--flow-color));
+      opacity: .94;
+      filter: drop-shadow(0 0 8px var(--flow-color));
+    }
+
+    .flow-pulse {
+      fill: rgba(255, 255, 255, .86);
+      stroke: var(--flow-color);
+      stroke-width: .28;
+      filter: drop-shadow(0 0 10px var(--flow-color));
     }
 
     .node {
       position: absolute;
+      z-index: 2;
       display: grid;
       gap: 2px;
       min-width: 88px;
@@ -1538,8 +1555,7 @@ class HacsHomeEnergyCard extends LitElement {
 
   renderFlows(model) {
     // Each flow path is drawn twice: a faint static base line and a dashed glowing line.
-    // The glowing line animates stroke-dashoffset; the duration is derived from watts,
-    // and export/discharge flows reverse the animation direction.
+    // Active paths also get larger pulse markers so direction remains visible on busy backgrounds.
     return html`
       <svg class="flows" viewBox="0 0 100 58" preserveAspectRatio="none" aria-hidden="true">
         ${model.flows.map((item) => {
@@ -1547,13 +1563,13 @@ class HacsHomeEnergyCard extends LitElement {
           return html`
             <path class="flow-base" d=${item.path}></path>
             <path
-              class="flow-line ${item.active ? "" : "is-idle"} ${reversed ? "is-reverse" : ""}"
+              class="flow-line ${item.active ? "is-active" : "is-idle"} ${reversed ? "is-reverse" : ""}"
               style="--flow-color:${item.color}; --flow-speed:${item.speed || 8}s"
               d=${item.path}
             ></path>
             ${item.active
               ? html`
-                  <circle class="flow-particle" r="0.72" style="--flow-color:${item.color}">
+                  <circle class="flow-particle flow-pulse" r="1.05" style="--flow-color:${item.color}">
                     <animateMotion
                       dur=${`${Math.max(1.6, item.speed || 4)}s`}
                       repeatCount="indefinite"
@@ -1563,7 +1579,7 @@ class HacsHomeEnergyCard extends LitElement {
                       calcMode="linear"
                     ></animateMotion>
                   </circle>
-                  <circle class="flow-particle" r="0.48" style="--flow-color:${item.color}; opacity:.58">
+                  <circle class="flow-particle" r="0.72" style="--flow-color:${item.color}; opacity:.68">
                     <animateMotion
                       dur=${`${Math.max(1.6, item.speed || 4)}s`}
                       begin="-0.8s"
@@ -1891,7 +1907,7 @@ if (typeof window !== "undefined") {
   window.customCards = window.customCards || [];
   window.customCards.push({
     type: "hacs-home-energy-card",
-    name: "HACS-home-energy-card",
+    name: "HACS Home Energy Card",
     description: "Cinematic animated energy flow visualisation for Home Assistant.",
   });
 }

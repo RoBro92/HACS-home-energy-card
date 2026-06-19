@@ -1,4 +1,4 @@
-# HACS-home-energy-card Setup
+# HACS Home Energy Card Setup
 
 This card can be configured from the Home Assistant visual card editor or with YAML. The visual editor exposes the same fields listed below; YAML is useful when copying between dashboards or when using helper entities for setup toggles.
 
@@ -27,7 +27,7 @@ type: module
 In a Home Assistant dashboard:
 
 1. Edit the dashboard.
-2. Add a manual card or search for `HACS-home-energy-card`.
+2. Add a manual card or search for HACS Home Energy Card.
 3. Enter your entity IDs in the card editor fields.
 4. Use the setup fields to enable or disable EV, solar, and battery sections.
 
@@ -39,20 +39,20 @@ For the quickest setup, configure only `entities.grid_power` and `entities.house
 
 The default layout keeps the background clear: floating nodes show compact live values, the bottom bar shows live status, and the top daily summary is hidden.
 
-Clicking a floating node or bottom-bar item opens an in-card detail panel. The default rows show the core value for that group, and `detail_entities` adds extra rows such as voltage, current, and longer energy totals. Rows backed by entities still open the Home Assistant more-info dialog when clicked.
+Clicking a floating node or bottom bar item opens an in card detail panel. The default rows show the core value for that group, and `detail_entities` adds extra rows such as voltage, current, and longer energy totals. Rows backed by entities still open the Home Assistant more info dialog when clicked.
 
 | Field | Default | Notes |
 | --- | --- | --- |
-| `show_title` | `false` | Set to `true` if you want optional top-left title/subtitle text. |
+| `show_title` | `false` | Set to `true` if you want optional top left title and subtitle text. |
 | `show_daily_summary` | `false` | Set to `true` to restore the top daily kWh strip. |
-| `show_bottom_bar` | `true` | Set to `false` for a cleaner image-only card. |
+| `show_bottom_bar` | `true` | Set to `false` for a cleaner image only card. |
 | `node_detail` | `minimal` | Use `full` if floating nodes should also show status text. |
 | `card_width` | blank | Optional fixed card width in pixels. |
 | `card_height` | blank | Optional fixed card height in pixels. |
 | `min_width` | `320` | Minimum width in pixels. Lower configured widths are clamped. |
 | `min_height` | `180` | Minimum height in pixels. Lower configured heights are clamped. |
 
-Leave `card_width` and `card_height` blank for a responsive card that fills the available dashboard column. Set both values when you are designing for a fixed wall-panel, kiosk, or dashboard grid slot:
+Leave `card_width` and `card_height` blank for a responsive card that fills the available dashboard column. Set both values when you are designing for a fixed wall panel, kiosk, or dashboard grid slot:
 
 ```yaml
 card_width: 900
@@ -90,7 +90,7 @@ node_info:
     entity: sensor.battery_temperature
 ```
 
-Choose the bottom glance cards with `bottom_bar`. Built-in card types are `grid`, `cost`, `sun`, `solar`, `house`, `ev`, and `battery`.
+Choose the bottom glance cards with `bottom_bar`. Built in card types are `grid`, `cost`, `sun`, `solar`, `house`, `ev`, and `battery`.
 
 ```yaml
 bottom_bar:
@@ -180,7 +180,7 @@ Enable EV with `show_ev: true` or an entity that is on.
 
 | Field | Unit | Notes |
 | --- | --- | --- |
-| `entities.ev_power` | W | Current EV charge power. Negative values are treated as vehicle-to-home discharge. |
+| `entities.ev_power` | W | Current EV charge power. Negative values are treated as vehicle to home discharge. |
 | `entities.ev_soc` | % | EV state of charge. |
 | `entities.ev_charging_state` | state or binary | `on`, `true`, or `charging` displays as charging. `off`, `false`, or `not_charging` displays as not charging. Other states are shown as readable text. |
 
@@ -197,7 +197,7 @@ detail_entities:
 
 ## Optional Grid And Home Detail Sensors
 
-Grid cost supports either fixed rates or dynamic rate sensors. Dynamic sensors are better for multi-tariff energy providers because the card reads the current import/export tariff directly from Home Assistant.
+Grid cost supports either fixed rates or dynamic rate sensors. Dynamic sensors are better for multiple tariff energy providers because the card reads the current import and export tariff directly from Home Assistant.
 
 ```yaml
 tariffs:
