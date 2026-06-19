@@ -17,7 +17,7 @@ test("HACS metadata points to the module path served by HACS", () => {
   const hacs = JSON.parse(read("hacs.json"));
 
   assert.equal(hacs.name, "HACS Home Energy Card");
-  assert.equal(hacs.filename, "hacs-home-energy-card.js");
+  assert.equal(hacs.filename, "HACS-home-energy-card.js");
 });
 
 test("public testing support files are present", () => {
@@ -52,7 +52,7 @@ test("HACS preview docs show the logo, install link, and short setup path", () =
   assert.doesNotMatch(readme.slice(0, 400), /hacs-home-energy-card-logo\.png/);
   assert.match(readme, /docs\/images\/card-day\.png/);
   assert.match(readme, /my\.home-assistant\.io\/redirect\/hacs_repository/);
-  assert.match(readme, /\/hacsfiles\/HACS-home-energy-card\/hacs-home-energy-card\.js/);
+  assert.match(readme, /\/hacsfiles\/HACS-home-energy-card\/HACS-home-energy-card\.js/);
   assert.match(info, /docs\/images\/hacs-home-energy-card-logo\.png/);
   assert.match(info, /docs\/images\/card-day\.png/);
   assert.match(info, /Public Testing/);
@@ -69,7 +69,7 @@ test("card picker metadata enables a visual community card entry", () => {
 
 test("release package still contains bundled backgrounds beside the card module", () => {
   const expectedDistFiles = [
-    "dist/hacs-home-energy-card.js",
+    "dist/HACS-home-energy-card.js",
     "dist/energy-bg-full-day.png",
     "dist/energy-bg-full-night.png",
     "dist/energy-bg-base-day.png",

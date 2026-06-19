@@ -23,7 +23,7 @@ Dashboard
 After installing, confirm the dashboard resource is:
 
 ```yaml
-url: /hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js
+url: /hacsfiles/HACS-home-energy-card/HACS-home-energy-card.js
 type: module
 ```
 

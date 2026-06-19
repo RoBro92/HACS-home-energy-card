@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- Renames the packaged `dist` module to `HACS-home-energy-card.js` so HACS can find a plugin file matching the repository name exactly.
+- Updates HACS metadata and resource documentation to use the case matching file served by HACS.
+
 ## 1.0.4
 
 - Fixes the HACS resource path so Home Assistant loads `hacs-home-energy-card.js` from the path HACS serves.

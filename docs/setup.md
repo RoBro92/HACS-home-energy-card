@@ -16,7 +16,7 @@ RoBro92/HACS-home-energy-card
 3. Confirm the Lovelace resource exists:
 
 ```yaml
-url: /hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js
+url: /hacsfiles/HACS-home-energy-card/HACS-home-energy-card.js
 type: module
 ```
 

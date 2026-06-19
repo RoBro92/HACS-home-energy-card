@@ -12,7 +12,7 @@
 HACS should add this dashboard resource automatically:
 
 ```yaml
-url: /hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js
+url: /hacsfiles/HACS-home-energy-card/HACS-home-energy-card.js
 type: module
 ```
 
@@ -31,10 +31,10 @@ entities:
 2. Add this resource:
 
 ```yaml
-url: /local/hacs-home-energy-card/hacs-home-energy-card.js
+url: /local/hacs-home-energy-card/HACS-home-energy-card.js
 type: module
 ```
 
 3. Add the manual card YAML shown above.
 
-The bundled background images must stay in the same folder as `hacs-home-energy-card.js`.
+The bundled background images must stay in the same folder as `HACS-home-energy-card.js`.
