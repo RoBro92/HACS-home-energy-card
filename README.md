@@ -2,6 +2,25 @@
 
 `energy-home-visual-card` is a fullscreen-friendly Home Assistant Lovelace custom card for cinematic energy monitoring. It places animated SVG power-flow lines over a high-quality home energy background and renders live values for grid, solar, house load, EV charging, battery state, and daily energy.
 
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RoBro92&repository=HACS-home-energy-card&category=dashboard)
+
+## Install
+
+Install through HACS as a custom Dashboard repository:
+
+```text
+RoBro92/HACS-home-energy-card
+```
+
+The Lovelace resource should be:
+
+```yaml
+url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
+type: module
+```
+
+HACS installs the card and bundled background images automatically.
+
 ## Preview
 
 ### Day and Night Cycle
@@ -30,8 +49,9 @@
 - Switches between setup-specific backgrounds using `show_ev`, `show_solar`, and `show_battery`.
 - Supports day/night background switching from `sun.sun` or another configured entity.
 - Supports `show_ev`, `show_solar`, and `show_battery` as booleans or Home Assistant entities.
-- Visual card editor support for the main setup options and sensor entity IDs.
+- Visual card editor support for the main setup options, sizing, and sensor entity IDs.
 - Configurable entity IDs for power, energy summary, battery SOC, EV SOC, EV charging state, and solar efficiency.
+- Optional pixel width and height settings with minimum size clamping.
 - Animated SVG flow overlays for grid, solar, EV, and battery.
 - Subtle directional particles show energy transfer without adding more panels.
 - Animation speed scales with the current power value.
@@ -53,6 +73,10 @@ show_title: false
 show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
+card_width: 900
+card_height: 506
+min_width: 320
+min_height: 180
 
 labels:
   grid: Grid
@@ -108,11 +132,11 @@ detail_entities:
     energy_month: sensor.solar_energy_month
 ```
 
-The bundled backgrounds load automatically when the card and images are installed together through HACS or from `dist/`. Use `backgrounds` only when you want to override the provided images.
+The bundled backgrounds load automatically when the card and images are installed together through HACS. Use `backgrounds` only when you want to override the provided images.
 
 ## Documentation
 
-The README is intentionally kept as a quick start. Detailed setup stays in versioned repo docs so HACS users, pull requests, and releases all reference the same instructions:
+The README is a quick start. Detailed setup is split into focused docs and examples:
 
 - [Setup guide](docs/setup.md)
 - [Full dashboard example](examples/dashboard.yaml)
@@ -123,25 +147,9 @@ The README is intentionally kept as a quick start. Detailed setup stays in versi
 - Start with only `grid_power` and `house_power`; then add solar, EV, and battery sections one at a time.
 - Use `show_ev`, `show_solar`, and `show_battery` with booleans for a fixed dashboard, or helper entities for reusable dashboards.
 - Keep `show_title: false` and `show_daily_summary: false` for the clean visual layout shown above.
+- Leave `card_width` and `card_height` blank for a responsive card, or set pixel values when using a fixed wall-panel or kiosk layout.
 - Add `detail_entities` only for sensors you actually have; missing detail rows are ignored.
 - Use `bottom_bar` to choose glance cards such as grid cost, sunrise/sunset, solar, EV, battery, or any custom entity.
-
-## HACS Install
-
-Add this repository as a custom HACS Dashboard/Lovelace repository, then install it:
-
-```text
-RoBro92/HACS-home-energy-card
-```
-
-The Lovelace resource should be:
-
-```yaml
-url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
-type: module
-```
-
-HACS installs the JavaScript module and bundled background images from `dist/`.
 
 ## Config
 
@@ -166,6 +174,10 @@ HACS installs the JavaScript module and bundled background images from `dist/`.
 | `show_daily_summary` | No | Shows the top daily kWh summary strip when true. Defaults to false. |
 | `show_bottom_bar` | No | Shows the bottom live-status bar when true. Defaults to true. |
 | `node_detail` | No | `minimal` shows compact floating nodes. `full` adds status text to nodes. |
+| `card_width` | No | Fixed card width in pixels. Leave blank for responsive width. Values below `min_width` are clamped. |
+| `card_height` | No | Fixed card height in pixels. Leave blank to keep the configured aspect ratio. Values below `min_height` are clamped. |
+| `min_width` | No | Minimum card width in pixels. Defaults to `320`. |
+| `min_height` | No | Minimum card height in pixels. Defaults to `180`. |
 | `labels.grid/solar/house/ev/battery` | No | Renames floating nodes and detail panel titles. |
 | `labels.gridCard/evCard` | No | Renames bottom-bar labels where a shorter label is useful. |
 | `node_info.<group>.entity` | No | Adds one extra compact value to a floating node. |
@@ -199,6 +211,8 @@ The card chooses the background in this order:
 3. Time: `day` or `night`, based on `entities.sun`, `time_of_day`, or local clock fallback.
 
 ## Card-Mod Variables
+
+Most users should use `card_width`, `card_height`, `min_width`, and `min_height` for sizing. CSS variables remain available for theme-level polish:
 
 ```yaml
 card_mod:

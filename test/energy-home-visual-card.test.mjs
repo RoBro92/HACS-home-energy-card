@@ -272,6 +272,10 @@ test("buildEnergyModel exposes optional visual layers from config", () => {
       show_bottom_bar: false,
       show_title: true,
       node_detail: "full",
+      card_width: 920,
+      card_height: 520,
+      min_width: 480,
+      min_height: 270,
       entities: {
         grid_power: "sensor.grid_power_w",
         house_power: "sensor.house_power_w",
@@ -284,6 +288,31 @@ test("buildEnergyModel exposes optional visual layers from config", () => {
   assert.equal(model.showStatusBar, false);
   assert.equal(model.showTitle, true);
   assert.equal(model.nodeDetail, "full");
+  assert.equal(model.size.width, "920px");
+  assert.equal(model.size.height, "520px");
+  assert.equal(model.size.minWidth, "480px");
+  assert.equal(model.size.minHeight, "270px");
+});
+
+test("buildEnergyModel clamps configured card dimensions to usable minimums", () => {
+  const model = buildEnergyModel(
+    {
+      card_width: 100,
+      card_height: 100,
+      min_width: 100,
+      min_height: 100,
+      entities: {
+        grid_power: "sensor.grid_power_w",
+        house_power: "sensor.house_power_w",
+      },
+    },
+    hass,
+  );
+
+  assert.equal(model.size.width, "320px");
+  assert.equal(model.size.height, "180px");
+  assert.equal(model.size.minWidth, "320px");
+  assert.equal(model.size.minHeight, "180px");
 });
 
 test("buildEnergyModel calculates solar efficiency from configured capacity", () => {

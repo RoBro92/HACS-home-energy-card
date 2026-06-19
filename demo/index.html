@@ -135,7 +135,7 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../energy-home-visual-card.js?v=preview-18");
+      await import("../energy-home-visual-card.js?v=preview-19");
 
       const card = document.querySelector("energy-home-visual-card");
       const evToggle = document.querySelector("#evToggle");
@@ -192,6 +192,10 @@
         show_battery: "input_boolean.has_battery",
         solar_capacity_kw: 5,
         battery_capacity_kwh: 13.5,
+        card_width: 900,
+        card_height: 506,
+        min_width: 320,
+        min_height: 180,
         labels: {
           grid: "Grid",
           gridCard: "Grid cost",

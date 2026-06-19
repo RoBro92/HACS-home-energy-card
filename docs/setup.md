@@ -4,6 +4,8 @@ This card can be configured from the Home Assistant visual card editor or with Y
 
 ## Install With HACS
 
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RoBro92&repository=HACS-home-energy-card&category=dashboard)
+
 1. In HACS, add this as a custom Dashboard repository:
 
 ```text
@@ -45,6 +47,21 @@ Clicking a floating node or bottom-bar item opens an in-card detail panel. The d
 | `show_daily_summary` | `false` | Set to `true` to restore the top daily kWh strip. |
 | `show_bottom_bar` | `true` | Set to `false` for a cleaner image-only card. |
 | `node_detail` | `minimal` | Use `full` if floating nodes should also show status text. |
+| `card_width` | blank | Optional fixed card width in pixels. |
+| `card_height` | blank | Optional fixed card height in pixels. |
+| `min_width` | `320` | Minimum width in pixels. Lower configured widths are clamped. |
+| `min_height` | `180` | Minimum height in pixels. Lower configured heights are clamped. |
+
+Leave `card_width` and `card_height` blank for a responsive card that fills the available dashboard column. Set both values when you are designing for a fixed wall-panel, kiosk, or dashboard grid slot:
+
+```yaml
+card_width: 900
+card_height: 506
+min_width: 320
+min_height: 180
+```
+
+If only `card_width` is set, the card keeps its normal aspect ratio. If both width and height are set, the scene scales into that exact pixel box.
 
 ## Labels, Node Extras, And Bottom Cards
 
@@ -255,6 +272,10 @@ show_title: false
 show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
+card_width: 900
+card_height: 506
+min_width: 320
+min_height: 180
 
 labels:
   grid: Grid

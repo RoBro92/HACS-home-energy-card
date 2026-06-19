@@ -8,6 +8,10 @@ show_title: false
 show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
+card_width: 900
+card_height: 506
+min_width: 320
+min_height: 180
 
 labels:
   grid: Grid

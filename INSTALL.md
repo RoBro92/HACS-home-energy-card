@@ -1,45 +1,49 @@
 # Installation
 
-## Manual Home Assistant Install
+## HACS
 
-1. Run the build locally:
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=RoBro92&repository=HACS-home-energy-card&category=dashboard)
 
-   ```bash
-   npm run build
+1. Open HACS.
+2. Add this repository as a custom Dashboard repository:
+
+   ```text
+   RoBro92/HACS-home-energy-card
    ```
 
-2. Copy the generated `dist/` folder to Home Assistant:
+3. Install `Energy Home Visual Card`.
+4. Confirm the Lovelace resource exists:
+
+   ```yaml
+   url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
+   type: module
+   ```
+
+5. Refresh the browser after installing or updating the card.
+
+## Manual Install
+
+1. Download the repository files.
+2. Copy the contents of `dist/` to:
 
    ```text
    /config/www/energy-home-visual-card/
    ```
 
-   The folder must contain `energy-home-visual-card.js` and the bundled `energy-bg-*.png` images.
-
-3. Add the Lovelace resource:
+3. Add this Lovelace resource:
 
    ```yaml
    url: /local/energy-home-visual-card/energy-home-visual-card.js
    type: module
    ```
 
-4. Add the card to a dashboard using one of the examples in `examples/` or the full setup guide in `docs/setup.md`.
-
-## HACS Custom Repository
-
-1. Push this repository to GitHub.
-2. Run `npm run build` and commit `dist/` before creating a release tag.
-3. In HACS, add it as a custom Dashboard/Lovelace repository:
-
-   ```text
-   RoBro92/HACS-home-energy-card
-   ```
-
-4. Install it and add the resource if HACS does not add it automatically:
+4. Add the card to a dashboard:
 
    ```yaml
-   url: /hacsfiles/HACS-home-energy-card/energy-home-visual-card.js
-   type: module
+   type: custom:energy-home-visual-card
+   entities:
+     grid_power: sensor.grid_power_w
+     house_power: sensor.house_consumption_w
    ```
 
 ## Background Images
@@ -49,8 +53,8 @@ The bundled images load automatically from the same folder as `energy-home-visua
 - HACS path: `/hacsfiles/HACS-home-energy-card/energy-bg-*.png`
 - Manual path: `/local/energy-home-visual-card/energy-bg-*.png`
 
-You can override paths in YAML with the `backgrounds` object. The older `background_full` and `background_no_ev` keys still work as fallbacks.
+Use `backgrounds` only if you want to override the bundled images.
 
-## Sensor Setup
+## Setup
 
-See `docs/setup.md` for the complete sensor list, including grid import/export, home usage, solar production and efficiency, battery charge/discharge and capacity, EV charge power, EV state of charge, EV charging state, and day/night switching.
+See [docs/setup.md](docs/setup.md) for the full sensor list, sizing options, bottom-bar options, detail panels, and day/night switching.

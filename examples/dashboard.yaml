@@ -8,6 +8,10 @@ show_title: false
 show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
+card_width: 900
+card_height: 506
+min_width: 320
+min_height: 180
 
 labels:
   grid: Grid
@@ -86,10 +90,3 @@ actions:
       service: lock.unlock
       target:
         entity_id: lock.ev
-
-card_mod:
-  style: |
-    energy-home-visual-card {
-      --energy-card-aspect-ratio: 1672 / 941;
-      --energy-card-radius: 8px;
-    }

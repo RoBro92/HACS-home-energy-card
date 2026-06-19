@@ -7,6 +7,8 @@ const MODULE_BASE_URL = new URL(".", import.meta.url);
 const ACTIVE_THRESHOLD_W = 25;
 const DAY_START_HOUR = 6;
 const NIGHT_START_HOUR = 19;
+const MIN_CARD_WIDTH_PX = 320;
+const MIN_CARD_HEIGHT_PX = 180;
 
 function moduleAsset(path) {
   return new URL(path, MODULE_BASE_URL).href;
@@ -86,6 +88,25 @@ export function parseNumber(value) {
   if (!normalised || normalised === "unknown" || normalised === "unavailable") return null;
   const parsed = Number.parseFloat(normalised);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function pixelDimension(value, minimum) {
+  const parsed = parseNumber(value);
+  if (parsed === null) return null;
+  return `${Math.max(minimum, Math.round(parsed))}px`;
+}
+
+function cardSizeModel(config) {
+  const minWidth = pixelDimension(config.min_width ?? config.minWidth, MIN_CARD_WIDTH_PX) || `${MIN_CARD_WIDTH_PX}px`;
+  const minHeight = pixelDimension(config.min_height ?? config.minHeight, MIN_CARD_HEIGHT_PX) || `${MIN_CARD_HEIGHT_PX}px`;
+  const widthMinimum = parseNumber(minWidth) ?? MIN_CARD_WIDTH_PX;
+  const heightMinimum = parseNumber(minHeight) ?? MIN_CARD_HEIGHT_PX;
+  return {
+    width: pixelDimension(config.card_width ?? config.cardWidth ?? config.width, widthMinimum),
+    height: pixelDimension(config.card_height ?? config.cardHeight ?? config.height, heightMinimum),
+    minWidth,
+    minHeight,
+  };
 }
 
 export function formatPower(value) {
@@ -672,6 +693,7 @@ export function buildEnergyModel(config = {}, hass) {
     showDailySummary: entityEnabled(config.show_daily_summary ?? config.showDailySummary, hass, false),
     showStatusBar: entityEnabled(config.show_bottom_bar ?? config.showBottomBar, hass, true),
     nodeDetail: configChoice(config.node_detail ?? config.nodeDetail, ["minimal", "full"], "minimal"),
+    size: cardSizeModel(config),
     labels,
     cost: gridCostModel(config, hass, gridWatts),
     actions: buildActions(config),
@@ -797,12 +819,15 @@ class EnergyHomeVisualCard extends LitElement {
   static styles = css`
     :host {
       display: block;
+      width: min(100%, var(--energy-card-width, 100%));
+      min-width: min(100%, var(--energy-card-min-width, 320px));
+      max-width: 100%;
       color: var(--energy-card-text, #f7fbff);
       --energy-card-accent: #58d5ff;
       --energy-card-gold: #ffd15a;
       --energy-card-radius: 8px;
       --energy-card-aspect-ratio: 1672 / 941;
-      --energy-card-padding: clamp(16px, 2.4vw, 34px);
+      --energy-card-padding: clamp(12px, 3cqw, 34px);
       --energy-card-glass: rgba(4, 12, 18, .58);
       --energy-card-border: rgba(220, 242, 255, .24);
       --energy-card-muted: rgba(232, 245, 255, .72);
@@ -815,7 +840,10 @@ class EnergyHomeVisualCard extends LitElement {
       position: relative;
       overflow: hidden;
       width: 100%;
+      height: var(--energy-card-height, auto);
+      min-height: var(--energy-card-min-height, 180px);
       aspect-ratio: var(--energy-card-aspect-ratio);
+      container-type: inline-size;
       border-radius: var(--energy-card-radius);
       border: 1px solid var(--energy-card-border);
       background: #071015;
@@ -894,13 +922,13 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .eyebrow {
-      font-size: clamp(10px, 1vw, 13px);
+      font-size: clamp(10px, 1.1cqw, 13px);
       line-height: 1.2;
     }
 
     .title {
       margin-top: 3px;
-      font-size: clamp(28px, 4vw, 58px);
+      font-size: clamp(28px, 5cqw, 58px);
       line-height: .98;
       font-weight: 650;
       text-shadow: 0 0 24px rgba(86, 213, 255, .22), 0 2px 18px rgba(0, 0, 0, .64);
@@ -919,7 +947,7 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .summary-item {
-      min-width: clamp(86px, 8.8vw, 138px);
+      min-width: clamp(86px, 11cqw, 138px);
       padding: 10px 12px;
       background: rgba(3, 12, 18, .46);
     }
@@ -930,7 +958,7 @@ class EnergyHomeVisualCard extends LitElement {
 
     .summary-value {
       margin-top: 4px;
-      font-size: clamp(15px, 1.5vw, 22px);
+      font-size: clamp(15px, 2cqw, 22px);
       font-weight: 650;
       white-space: nowrap;
     }
@@ -1015,7 +1043,7 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .node-value {
-      font-size: clamp(16px, 1.65vw, 24px);
+      font-size: clamp(16px, 2.1cqw, 24px);
       line-height: 1;
       font-weight: 700;
       text-shadow: 0 0 18px rgba(86, 213, 255, .24);
@@ -1066,7 +1094,7 @@ class EnergyHomeVisualCard extends LitElement {
       z-index: 3;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
-      gap: clamp(8px, 1.3vw, 16px);
+      gap: clamp(8px, 1.6cqw, 16px);
     }
 
     .pill {
@@ -1113,13 +1141,13 @@ class EnergyHomeVisualCard extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: clamp(14px, 1.2vw, 18px);
+      font-size: clamp(14px, 1.7cqw, 18px);
       font-weight: 650;
     }
 
     .pill-value {
       color: #ffffff;
-      font-size: clamp(13px, 1vw, 16px);
+      font-size: clamp(13px, 1.4cqw, 16px);
       white-space: nowrap;
     }
 
@@ -1424,6 +1452,7 @@ class EnergyHomeVisualCard extends LitElement {
     if (!this._config) return html``;
     const model = buildEnergyModel(this._config, this.hass);
     this._model = model;
+    this.applySizing(model.size);
 
     return html`
       <ha-card class="mode-${model.mode}" style="--energy-background: url('${model.background}')">
@@ -1456,6 +1485,21 @@ class EnergyHomeVisualCard extends LitElement {
         </div>
       </ha-card>
     `;
+  }
+
+  applySizing(size) {
+    const width = size?.width || "100%";
+    this.style.width = width === "100%" ? "100%" : `min(100%, ${width})`;
+    this.style.minWidth = `min(100%, ${size?.minWidth || `${MIN_CARD_WIDTH_PX}px`})`;
+    this.style.maxWidth = "100%";
+    this.style.setProperty("--energy-card-width", width);
+    this.style.setProperty("--energy-card-min-width", size?.minWidth || `${MIN_CARD_WIDTH_PX}px`);
+    this.style.setProperty("--energy-card-min-height", size?.minHeight || `${MIN_CARD_HEIGHT_PX}px`);
+    if (size?.height) {
+      this.style.setProperty("--energy-card-height", size.height);
+    } else {
+      this.style.removeProperty("--energy-card-height");
+    }
   }
 
   renderTopbar(model) {
@@ -1688,6 +1732,10 @@ const EDITOR_FIELDS = [
   ["Show Daily Summary", ["show_daily_summary"], "false"],
   ["Show Bottom Bar", ["show_bottom_bar"], "true"],
   ["Node Detail", ["node_detail"], "minimal or full"],
+  ["Card Width (px)", ["card_width"], "900"],
+  ["Card Height (px)", ["card_height"], "506"],
+  ["Minimum Width (px)", ["min_width"], "320"],
+  ["Minimum Height (px)", ["min_height"], "180"],
   ["Grid Label", ["labels", "grid"], "Grid"],
   ["Grid Bottom Label", ["labels", "gridCard"], "Electricity"],
   ["Home Label", ["labels", "house"], "Home"],
@@ -1776,15 +1824,15 @@ class EnergyHomeVisualCardEditor extends LitElement {
       <div class="editor">
         <div class="section-title">Card</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(0, 23).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(0, 27).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
         <div class="section-title">Sensors</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(23, 42).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(27, 46).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
         <div class="section-title">Detail Sensors</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(42).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(46).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
       </div>
     `;
