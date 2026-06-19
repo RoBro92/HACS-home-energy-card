@@ -8,7 +8,8 @@
 - Switches between setup-specific backgrounds using `show_ev`, `show_solar`, and `show_battery`.
 - Supports day/night background switching from `sun.sun` or another configured entity.
 - Supports `show_ev`, `show_solar`, and `show_battery` as booleans or Home Assistant entities.
-- Configurable entity IDs for power, energy summary, and battery SOC.
+- Visual card editor support for the main setup options and sensor entity IDs.
+- Configurable entity IDs for power, energy summary, battery SOC, EV SOC, EV charging state, and solar efficiency.
 - Animated SVG flow overlays for grid, solar, EV, and battery.
 - Animation speed scales with the current power value.
 - Import/export and charge/discharge direction handling.
@@ -23,6 +24,8 @@ type: custom:energy-home-visual-card
 show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
+solar_capacity_kw: 5
+battery_capacity_kwh: 13.5
 
 entities:
   sun: sun.sun
@@ -30,6 +33,8 @@ entities:
   solar_power: sensor.solar_power_w
   house_power: sensor.house_consumption_w
   ev_power: sensor.ev_charging_power_w
+  ev_soc: sensor.ev_state_of_charge
+  ev_charging_state: binary_sensor.ev_charging
   battery_power: sensor.battery_power_w
   battery_soc: sensor.battery_soc
 
@@ -41,7 +46,7 @@ energy_today:
 
 The bundled backgrounds load automatically when the card and images are installed together through HACS or from `dist/`. Use `backgrounds` only when you want to override the provided images.
 
-See `examples/dashboard.yaml` and `examples/dashboard-no-ev.yaml` for fuller dashboard snippets.
+See `docs/setup.md`, `examples/dashboard.yaml`, and `examples/dashboard-no-ev.yaml` for fuller setup snippets.
 
 ## HACS Install
 
@@ -77,13 +82,19 @@ HACS installs the JavaScript module and bundled background images from `dist/`.
 | `show_ev` | No | Boolean or entity. Entity states `on`, `true`, `home`, `charging`, `plugged_in`, and `connected` show the EV. |
 | `show_solar` | No | Boolean or entity. Defaults to visible. |
 | `show_battery` | No | Boolean or entity. Defaults to visible. |
+| `solar_capacity_kw` | No | Solar install capacity in kW. Used to calculate solar efficiency. |
+| `battery_capacity_kwh` | No | Battery capacity in kWh. |
 | `entities.sun` | No | Sun entity for day/night switching. Defaults to `sun.sun`; falls back to local time if unavailable. |
 | `entities.grid_power` | Yes | Current grid power in W. Positive is importing, negative is exporting. |
-| `entities.solar_power` | Yes | Current solar production in W. |
+| `entities.solar_power` | When solar shown | Current solar production in W. |
+| `entities.solar_capacity` | No | Sensor alternative to `solar_capacity_kw`. Supports kW or W unit attributes. |
 | `entities.house_power` | Yes | Current house consumption in W. |
 | `entities.ev_power` | When EV shown | Current EV charging power in W. |
+| `entities.ev_soc` | No | EV state of charge percentage. |
+| `entities.ev_charging_state` | No | EV charging state or binary sensor. |
 | `entities.battery_power` | When battery shown | Current battery power in W. Positive is charging, negative is discharging. |
 | `entities.battery_soc` | When battery shown | Battery state of charge percentage. |
+| `entities.battery_capacity` | No | Sensor alternative to `battery_capacity_kwh`. Supports kWh or Wh unit attributes. |
 | `energy_today.grid` | No | Daily grid energy sensor in kWh. |
 | `energy_today.solar` | No | Daily solar energy sensor in kWh. |
 | `energy_today.home` | No | Daily home energy sensor in kWh. |

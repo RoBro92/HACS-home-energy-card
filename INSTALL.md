@@ -23,7 +23,7 @@
    type: module
    ```
 
-4. Add the card to a dashboard using one of the examples in `examples/`.
+4. Add the card to a dashboard using one of the examples in `examples/` or the full setup guide in `docs/setup.md`.
 
 ## HACS Custom Repository
 
@@ -50,3 +50,7 @@ The bundled images load automatically from the same folder as `energy-home-visua
 - Manual path: `/local/energy-home-visual-card/energy-bg-*.png`
 
 You can override paths in YAML with the `backgrounds` object. The older `background_full` and `background_no_ev` keys still work as fallbacks.
+
+## Sensor Setup
+
+See `docs/setup.md` for the complete sensor list, including grid import/export, home usage, solar production and efficiency, battery charge/discharge and capacity, EV charge power, EV state of charge, EV charging state, and day/night switching.

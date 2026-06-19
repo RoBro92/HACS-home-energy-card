@@ -4,6 +4,8 @@ subtitle: Live home power
 show_ev: false
 show_solar: true
 show_battery: true
+solar_capacity_kw: 5
+battery_capacity_kwh: 13.5
 
 entities:
   sun: sun.sun

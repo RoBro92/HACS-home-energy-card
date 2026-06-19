@@ -108,6 +108,67 @@ export function formatPercent(value) {
   return `${Math.max(0, Math.min(100, Math.round(parsed)))}%`;
 }
 
+function optionalPercent(value) {
+  const label = formatPercent(value);
+  return label === "-" ? null : label;
+}
+
+function formatBatteryCapacity(value) {
+  const parsed = parseNumber(value);
+  if (parsed === null) return null;
+  return `${Math.round(parsed * 10) / 10} kWh`;
+}
+
+function capacityWattsFromEntity(hass, entityId) {
+  const parsed = parseNumber(stateValue(hass, entityId));
+  if (parsed === null) return null;
+
+  const unit = String(stateAttributes(hass, entityId).unit_of_measurement || "").toLowerCase();
+  if (unit === "w" || unit === "watts") return parsed;
+  if (unit === "kw" || unit === "kilowatts") return parsed * 1000;
+  return parsed <= 100 ? parsed * 1000 : parsed;
+}
+
+function batteryCapacityKwhFromEntity(hass, entityId) {
+  const parsed = parseNumber(stateValue(hass, entityId));
+  if (parsed === null) return null;
+
+  const unit = String(stateAttributes(hass, entityId).unit_of_measurement || "").toLowerCase();
+  if (unit === "wh") return parsed / 1000;
+  if (unit === "kwh") return parsed;
+  return parsed;
+}
+
+function solarCapacityWatts(config, hass, entities) {
+  const configured = parseNumber(config.solar_capacity_kw ?? config.solarCapacityKw);
+  if (configured !== null) return configured * 1000;
+  return capacityWattsFromEntity(hass, entities.solar_capacity);
+}
+
+function batteryCapacityKwh(config, hass, entities) {
+  const configured = parseNumber(config.battery_capacity_kwh ?? config.batteryCapacityKwh);
+  if (configured !== null) return configured;
+  return batteryCapacityKwhFromEntity(hass, entities.battery_capacity);
+}
+
+function formatSolarEfficiency(solarWatts, capacityWatts) {
+  if (!capacityWatts || capacityWatts <= 0) return null;
+  const efficiency = Math.max(0, Math.round(((parseNumber(solarWatts) ?? 0) / capacityWatts) * 100));
+  return `${efficiency}%`;
+}
+
+function normaliseStateLabel(value, fallback) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw || raw === "unknown" || raw === "unavailable") return fallback;
+  if (["on", "true", "charging"].includes(raw)) return "charging";
+  if (["off", "false", "not_charging", "not charging"].includes(raw)) return "not charging";
+  return raw.replace(/_/g, " ");
+}
+
+function joinLabels(parts) {
+  return parts.filter((part) => part && part !== "-").join(" / ");
+}
+
 export function entityEnabled(value, hass, fallback = false) {
   if (value === undefined || value === null) return fallback;
   if (typeof value === "boolean") return value;
@@ -236,12 +297,21 @@ export function buildEnergyModel(config = {}, hass) {
   const evWatts = parseNumber(stateValue(hass, entities.ev_power)) ?? 0;
   const batteryWatts = parseNumber(stateValue(hass, entities.battery_power)) ?? 0;
   const batterySoc = stateValue(hass, entities.battery_soc);
+  const batteryCapacity = batteryCapacityKwh(config, hass, entities);
+  const evSoc = stateValue(hass, entities.ev_soc);
+  const solarEfficiency = formatSolarEfficiency(solarWatts, solarCapacityWatts(config, hass, entities));
   const mode = timeOfDay(config, hass, config.now ? new Date(config.now) : new Date());
   const visible = {
     ev: showEv,
     solar: showSolar,
     battery: showBattery,
   };
+  const evStatus = normaliseStateLabel(
+    stateValue(hass, entities.ev_charging_state),
+    statusFromPower(evWatts, "charging", "discharging", "plugged in"),
+  );
+  const batterySocLabel = formatPercent(batterySoc);
+  const batteryCapacityLabel = formatBatteryCapacity(batteryCapacity);
 
   const model = {
     title: config.title || "Energy Flow",
@@ -259,6 +329,9 @@ export function buildEnergyModel(config = {}, hass) {
       watts: solarWatts,
       powerLabel: formatPower(solarWatts),
       status: solarWatts > ACTIVE_THRESHOLD_W ? "producing" : "idle",
+      efficiencyLabel: solarEfficiency,
+      statusLabel: joinLabels([solarWatts > ACTIVE_THRESHOLD_W ? "producing" : "idle", solarEfficiency]),
+      pillValue: joinLabels([formatPower(solarWatts), solarEfficiency]),
     },
     house: {
       watts: houseWatts,
@@ -268,13 +341,19 @@ export function buildEnergyModel(config = {}, hass) {
     ev: {
       watts: evWatts,
       powerLabel: formatPower(evWatts),
-      status: statusFromPower(evWatts, "charging", "discharging", "plugged in"),
+      socLabel: optionalPercent(evSoc) || "-",
+      status: evStatus,
+      statusLabel: joinLabels([evStatus, optionalPercent(evSoc)]),
+      pillValue: joinLabels([formatPower(evWatts), optionalPercent(evSoc)]),
     },
     battery: {
       watts: batteryWatts,
       powerLabel: formatPower(batteryWatts),
-      socLabel: formatPercent(batterySoc),
+      socLabel: batterySocLabel,
+      capacityLabel: batteryCapacityLabel,
       status: statusFromPower(batteryWatts, "charging", "discharging"),
+      statusLabel: joinLabels([statusFromPower(batteryWatts, "charging", "discharging"), batterySocLabel, batteryCapacityLabel]),
+      pillValue: joinLabels([formatPower(batteryWatts), batterySocLabel]),
     },
     energyToday: {
       grid: formatEnergy(stateValue(hass, energyToday.grid)),
@@ -764,10 +843,41 @@ class EnergyHomeVisualCard extends LitElement {
     }
   `;
 
+  static getConfigElement() {
+    return document.createElement("energy-home-visual-card-editor");
+  }
+
+  static getStubConfig() {
+    return {
+      title: "Energy Flow",
+      subtitle: "Live home power",
+      show_ev: false,
+      show_solar: true,
+      show_battery: true,
+      solar_capacity_kw: 5,
+      entities: {
+        sun: "sun.sun",
+        grid_power: "sensor.grid_power_w",
+        solar_power: "sensor.solar_power_w",
+        house_power: "sensor.house_power_w",
+        ev_power: "sensor.ev_charging_power_w",
+        ev_soc: "sensor.ev_state_of_charge",
+        ev_charging_state: "binary_sensor.ev_charging",
+        battery_power: "sensor.battery_power_w",
+        battery_soc: "sensor.battery_soc",
+      },
+      energy_today: {
+        grid: "sensor.grid_energy_today",
+        solar: "sensor.solar_energy_today",
+        home: "sensor.home_energy_today",
+      },
+    };
+  }
+
   setConfig(config) {
     if (!config) throw new Error("energy-home-visual-card requires a configuration object");
-    if (!config.entities || !config.entities.grid_power || !config.entities.solar_power || !config.entities.house_power) {
-      throw new Error("energy-home-visual-card requires entities.grid_power, entities.solar_power, and entities.house_power");
+    if (!config.entities || !config.entities.grid_power || !config.entities.house_power) {
+      throw new Error("energy-home-visual-card requires entities.grid_power and entities.house_power");
     }
     this._config = config;
   }
@@ -790,19 +900,19 @@ class EnergyHomeVisualCard extends LitElement {
           <div class="mid">
             ${this.renderFlows(model)}
             ${model.visible.solar
-              ? this.renderNode("solar", "Solar", model.solar.powerLabel, model.solar.status, model.entities.solar_power)
+              ? this.renderNode("solar", "Solar", model.solar.powerLabel, model.solar.statusLabel, model.entities.solar_power)
               : html``}
             ${this.renderNode("grid", "Grid", model.grid.powerLabel, model.grid.status, model.entities.grid_power)}
             ${this.renderNode("house", "Home", model.house.powerLabel, model.house.status, model.entities.house_power)}
             ${model.visible.ev
-              ? this.renderNode("ev", "EV", model.ev.powerLabel, model.ev.status, model.entities.ev_power)
+              ? this.renderNode("ev", "EV", model.ev.powerLabel, model.ev.statusLabel, model.entities.ev_power)
               : html``}
             ${model.visible.battery
               ? this.renderNode(
                   "battery",
                   "Battery",
                   model.battery.powerLabel,
-                  `${model.battery.status} / ${model.battery.socLabel}`,
+                  model.battery.statusLabel,
                   model.entities.battery_power,
                 )
               : html``}
@@ -874,16 +984,16 @@ class EnergyHomeVisualCard extends LitElement {
       <div class="statusbar">
         ${this.renderPill("Electricity", model.grid.status, model.grid.powerLabel, "mdi:transmission-tower", "#58bfff", model.entities.grid_power)}
         ${model.visible.solar
-          ? this.renderPill("Solar", model.solar.status, model.solar.powerLabel, "mdi:solar-power-variant", "#ffd15a", model.entities.solar_power)
+          ? this.renderPill("Solar", model.solar.status, model.solar.pillValue, "mdi:solar-power-variant", "#ffd15a", model.entities.solar_power)
           : html``}
         ${model.visible.ev
-          ? this.renderPill("Electric Vehicle", model.ev.status, model.ev.powerLabel, "mdi:car-electric", "#50eaff", model.entities.ev_power)
+          ? this.renderPill("Electric Vehicle", model.ev.status, model.ev.pillValue, "mdi:car-electric", "#50eaff", model.entities.ev_power)
           : html``}
         ${model.visible.battery
           ? this.renderPill(
               "Battery",
               model.battery.status,
-              `${model.battery.powerLabel} / ${model.battery.socLabel}`,
+              model.battery.pillValue,
               "mdi:home-battery",
               "#56f0d0",
               model.entities.battery_power || model.entities.battery_soc,
@@ -914,8 +1024,128 @@ class EnergyHomeVisualCard extends LitElement {
   }
 }
 
+const EDITOR_FIELDS = [
+  ["Title", ["title"], "Energy Flow"],
+  ["Subtitle", ["subtitle"], "Live home power"],
+  ["Show EV", ["show_ev"], "true, false, or input_boolean.has_ev"],
+  ["Show Solar", ["show_solar"], "true, false, or input_boolean.has_solar"],
+  ["Show Battery", ["show_battery"], "true, false, or input_boolean.has_battery"],
+  ["Solar Capacity (kW)", ["solar_capacity_kw"], "5"],
+  ["Battery Capacity (kWh)", ["battery_capacity_kwh"], "13.5"],
+  ["Sun / Day-Night Entity", ["entities", "sun"], "sun.sun"],
+  ["Grid Import/Export Power", ["entities", "grid_power"], "sensor.grid_power_w"],
+  ["Home Power Usage", ["entities", "house_power"], "sensor.house_consumption_w"],
+  ["Solar Producing Power", ["entities", "solar_power"], "sensor.solar_power_w"],
+  ["Solar Capacity Entity", ["entities", "solar_capacity"], "sensor.solar_capacity_kw"],
+  ["Battery Charge/Discharge Power", ["entities", "battery_power"], "sensor.battery_power_w"],
+  ["Battery State of Charge", ["entities", "battery_soc"], "sensor.battery_soc"],
+  ["Battery Capacity Entity", ["entities", "battery_capacity"], "sensor.battery_capacity_kwh"],
+  ["EV Charge Power", ["entities", "ev_power"], "sensor.ev_charging_power_w"],
+  ["EV State of Charge", ["entities", "ev_soc"], "sensor.ev_state_of_charge"],
+  ["EV Charging State", ["entities", "ev_charging_state"], "binary_sensor.ev_charging"],
+  ["Grid Energy Today", ["energy_today", "grid"], "sensor.grid_energy_today"],
+  ["Solar Energy Today", ["energy_today", "solar"], "sensor.solar_energy_today"],
+  ["Home Energy Today", ["energy_today", "home"], "sensor.home_energy_today"],
+];
+
+class EnergyHomeVisualCardEditor extends LitElement {
+  static properties = {
+    hass: { attribute: false },
+    _config: { state: true },
+  };
+
+  static styles = css`
+    .editor {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .section-title {
+      margin-top: 6px;
+      color: var(--secondary-text-color);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    ha-textfield {
+      width: 100%;
+    }
+  `;
+
+  setConfig(config) {
+    this._config = config || {};
+  }
+
+  render() {
+    return html`
+      <div class="editor">
+        <div class="section-title">Card</div>
+        <div class="field-grid">
+          ${EDITOR_FIELDS.slice(0, 7).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+        </div>
+        <div class="section-title">Sensors</div>
+        <div class="field-grid">
+          ${EDITOR_FIELDS.slice(7).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+        </div>
+      </div>
+    `;
+  }
+
+  renderField(label, path, placeholder) {
+    return html`
+      <ha-textfield
+        label=${label}
+        .value=${this.readPath(path)}
+        placeholder=${placeholder}
+        @input=${(event) => this.updatePath(path, event.target.value)}
+      ></ha-textfield>
+    `;
+  }
+
+  readPath(path) {
+    let value = this._config || {};
+    for (const key of path) {
+      value = value?.[key];
+    }
+    return value ?? "";
+  }
+
+  updatePath(path, value) {
+    const config = {
+      ...(this._config || {}),
+      entities: { ...(this._config?.entities || {}) },
+      energy_today: { ...(this._config?.energy_today || this._config?.energyToday || {}) },
+    };
+    let target = config;
+    for (const key of path.slice(0, -1)) {
+      target[key] = { ...(target[key] || {}) };
+      target = target[key];
+    }
+
+    const key = path[path.length - 1];
+    const trimmed = String(value ?? "").trim();
+    if (trimmed) target[key] = trimmed;
+    else delete target[key];
+
+    this._config = config;
+    fireEvent(this, "config-changed", { config });
+  }
+}
+
 if (typeof customElements !== "undefined" && !customElements.get("energy-home-visual-card")) {
   customElements.define("energy-home-visual-card", EnergyHomeVisualCard);
+}
+
+if (typeof customElements !== "undefined" && !customElements.get("energy-home-visual-card-editor")) {
+  customElements.define("energy-home-visual-card-editor", EnergyHomeVisualCardEditor);
 }
 
 if (typeof window !== "undefined") {

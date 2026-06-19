@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildEnergyModel,
+  EnergyHomeVisualCard,
   entityEnabled,
   flowSpeedSeconds,
   formatEnergy,
@@ -19,8 +20,12 @@ const hass = {
     "sensor.solar_power_w": { state: "4567" },
     "sensor.house_power_w": { state: "2610" },
     "sensor.ev_power_w": { state: "7200" },
+    "sensor.ev_soc": { state: "62" },
+    "binary_sensor.ev_charging": { state: "on" },
     "sensor.battery_power_w": { state: "-1450" },
     "sensor.battery_soc": { state: "86" },
+    "sensor.battery_capacity_kwh": { state: "13.5", attributes: { unit_of_measurement: "kWh" } },
+    "sensor.solar_capacity_kw": { state: "5", attributes: { unit_of_measurement: "kW" } },
     "sensor.grid_energy_today": { state: "8.4" },
     "sensor.solar_energy_today": { state: "21.6" },
     "sensor.home_energy_today": { state: "14.2" },
@@ -87,10 +92,14 @@ test("buildEnergyModel derives display values, directions, background, and visib
       entities: {
         grid_power: "sensor.grid_power_w",
         solar_power: "sensor.solar_power_w",
+        solar_capacity: "sensor.solar_capacity_kw",
         house_power: "sensor.house_power_w",
         ev_power: "sensor.ev_power_w",
+        ev_soc: "sensor.ev_soc",
+        ev_charging_state: "binary_sensor.ev_charging",
         battery_power: "sensor.battery_power_w",
         battery_soc: "sensor.battery_soc",
+        battery_capacity: "sensor.battery_capacity_kwh",
       },
       energy_today: {
         grid: "sensor.grid_energy_today",
@@ -109,12 +118,55 @@ test("buildEnergyModel derives display values, directions, background, and visib
   assert.equal(model.grid.status, "exporting");
   assert.equal(model.grid.powerLabel, "1.2 kW");
   assert.equal(model.solar.powerLabel, "4.6 kW");
+  assert.equal(model.solar.efficiencyLabel, "91%");
+  assert.equal(model.solar.statusLabel, "producing / 91%");
   assert.equal(model.house.powerLabel, "2.6 kW");
   assert.equal(model.ev.status, "charging");
+  assert.equal(model.ev.socLabel, "62%");
+  assert.equal(model.ev.pillValue, "7.2 kW / 62%");
   assert.equal(model.battery.status, "discharging");
   assert.equal(model.battery.socLabel, "86%");
+  assert.equal(model.battery.capacityLabel, "13.5 kWh");
+  assert.equal(model.battery.statusLabel, "discharging / 86% / 13.5 kWh");
   assert.equal(model.energyToday.solar, "21.6 kWh");
   assert.equal(Object.hasOwn(model, "weather"), false);
+});
+
+test("buildEnergyModel calculates solar efficiency from configured capacity", () => {
+  const model = buildEnergyModel(
+    {
+      show_solar: true,
+      solar_capacity_kw: 5,
+      entities: {
+        grid_power: "sensor.grid_power_w",
+        solar_power: "sensor.solar_power_w",
+        house_power: "sensor.house_power_w",
+      },
+    },
+    hass,
+  );
+
+  assert.equal(model.solar.efficiencyLabel, "91%");
+  assert.equal(model.solar.pillValue, "4.6 kW / 91%");
+});
+
+test("setConfig only requires grid and home power sensors", () => {
+  const card = new EnergyHomeVisualCard();
+
+  assert.doesNotThrow(() =>
+    card.setConfig({
+      show_solar: false,
+      entities: {
+        grid_power: "sensor.grid_power_w",
+        house_power: "sensor.house_power_w",
+      },
+    }),
+  );
+
+  assert.throws(
+    () => card.setConfig({ entities: { grid_power: "sensor.grid_power_w" } }),
+    /entities\.grid_power and entities\.house_power/,
+  );
 });
 
 test("selectBackground prefers setup and time-specific background variants", () => {

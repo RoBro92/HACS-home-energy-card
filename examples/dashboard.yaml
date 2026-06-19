@@ -4,6 +4,8 @@ subtitle: Live home power
 show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
+solar_capacity_kw: 5
+battery_capacity_kwh: 13.5
 
 entities:
   sun: sun.sun
@@ -11,6 +13,8 @@ entities:
   solar_power: sensor.solar_power_w
   house_power: sensor.house_consumption_w
   ev_power: sensor.ev_charging_power_w
+  ev_soc: sensor.ev_state_of_charge
+  ev_charging_state: binary_sensor.ev_charging
   battery_power: sensor.battery_power_w
   battery_soc: sensor.battery_soc
 
