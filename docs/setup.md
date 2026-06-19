@@ -37,7 +37,7 @@ For the quickest setup, configure only `entities.grid_power` and `entities.house
 
 ## Visual Layout Options
 
-The default layout keeps the background clear: floating nodes show compact live values, the bottom bar shows live status, and the top daily summary is hidden.
+The default layout keeps the background clear: floating nodes show compact live values, the bottom bar shows glance information such as cost, energy split, battery reserve, sun state, and weather, and the top daily summary is hidden.
 
 Clicking a floating node or bottom bar item opens an in card detail panel. The default rows show the core value for that group, and `detail_entities` adds extra rows such as voltage, current, range, odometer, and longer energy totals. Sensor style rows open the Home Assistant more info dialog when clicked. Lock, switch, button, and input button entities render as circular controls at the bottom of the panel.
 
@@ -63,7 +63,7 @@ min_height: 180
 
 If only `card_width` is set, the card keeps its normal aspect ratio. If both width and height are set, the scene scales into that exact pixel box.
 
-## Labels, Node Extras, And Bottom Cards
+## Labels, Node Extras, And Bottom Bar
 
 Every floating node title can be renamed without changing entity IDs:
 
@@ -90,17 +90,32 @@ node_info:
     entity: sensor.battery_temperature
 ```
 
-Choose the bottom glance cards with `bottom_bar`. Built in card types are `grid`, `cost`, `sun`, `solar`, `house`, `ev`, and `battery`.
+Choose up to five bottom glance cards with `bottom_bar`. The visual editor exposes these as `Bottom Bar Slot 1` through `Bottom Bar Slot 5`.
 
 ```yaml
 bottom_bar:
-  - type: cost
-    label: Grid cost
-  - type: sun
-  - solar
-  - ev
-  - battery
+  - type: cost_today
+  - type: self_powered_today
+  - type: grid_import_export
+  - type: battery_reserve
+  - type: weather
 ```
+
+Recommended built in types:
+
+| Type | Shows | Useful sensors |
+| --- | --- | --- |
+| `cost_today` | Daily spend and optional budget progress | `costs.today_entity`, `costs.daily_budget` |
+| `cost_now` | Current grid import cost or export credit per hour | `entities.grid_power`, tariff rates |
+| `self_powered_today` | Percentage of home use covered without grid import | `energy_today.home`, `energy_today.grid_import` |
+| `grid_import_export` | Import/export comparison for today | `energy_today.grid_import`, `energy_today.grid_export` |
+| `battery_reserve` | Estimated remaining battery runtime at current home load | `entities.battery_soc`, battery capacity, `entities.house_power` |
+| `battery_discharge` | Battery discharge today | `energy_today.battery_discharge` |
+| `sun` | Next sunrise or sunset | `entities.sun` |
+| `weather` | Weather state and temperature | `entities.weather`, optional `entities.outdoor_temperature` |
+| `entity` | Any custom entity value | `entity`, `label`, optional `status` and `icon` |
+
+Legacy types `grid`, `cost`, `solar`, `house`, `ev`, and `battery` still work, but they mostly duplicate the floating node values. For a cleaner dashboard, use the glance types above.
 
 You can also show any sensor:
 
@@ -220,6 +235,22 @@ tariffs:
 
 The cost card shows the current import cost or export credit per hour based on `entities.grid_power`.
 
+For the bottom bar cost and energy comparison cards, add daily sensors where available:
+
+```yaml
+costs:
+  today_entity: sensor.energy_cost_today
+  daily_budget: 5
+
+energy_today:
+  grid_import: sensor.grid_import_today
+  grid_export: sensor.grid_export_today
+  home: sensor.home_energy_today
+  battery_discharge: sensor.battery_discharge_today
+```
+
+`costs.daily_budget` is optional. If it is set, the `cost_today` card shows a progress bar toward that daily budget.
+
 ```yaml
 detail_entities:
   grid:
@@ -313,16 +344,21 @@ tariffs:
   import_rate_entity: sensor.current_import_rate
   export_rate_entity: sensor.current_export_rate
 
+costs:
+  today_entity: sensor.energy_cost_today
+  daily_budget: 5
+
 bottom_bar:
-  - type: cost
-    label: Grid cost
-  - type: sun
-  - solar
-  - ev
-  - battery
+  - type: cost_today
+  - type: self_powered_today
+  - type: grid_import_export
+  - type: battery_reserve
+  - type: weather
 
 entities:
   sun: sun.sun
+  weather: weather.home
+  outdoor_temperature: sensor.outdoor_temperature
   grid_power: sensor.grid_power_w
   house_power: sensor.house_consumption_w
   solar_power: sensor.solar_power_w
@@ -342,8 +378,11 @@ node_info:
 
 energy_today:
   grid: sensor.grid_energy_today
+  grid_import: sensor.grid_import_today
+  grid_export: sensor.grid_export_today
   solar: sensor.solar_energy_today
   home: sensor.home_energy_today
+  battery_discharge: sensor.battery_discharge_today
 
 detail_entities:
   solar:

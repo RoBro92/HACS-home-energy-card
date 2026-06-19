@@ -33,18 +33,23 @@ tariffs:
   import_rate_entity: sensor.current_import_rate
   export_rate_entity: sensor.current_export_rate
 
+costs:
+  today_entity: sensor.energy_cost_today
+  daily_budget: 5
+
 # Bottom glance cards.
 bottom_bar:
-  - type: cost
-    label: Grid cost
-  - type: sun
-  - solar
-  - ev
-  - battery
+  - type: cost_today
+  - type: self_powered_today
+  - type: grid_import_export
+  - type: battery_reserve
+  - type: weather
 
 # Main energy sensors.
 entities:
   sun: sun.sun
+  weather: weather.home
+  outdoor_temperature: sensor.outdoor_temperature
   grid_power: sensor.grid_power_w
   solar_power: sensor.solar_power_w
   house_power: sensor.house_consumption_w
@@ -65,8 +70,11 @@ node_info:
 
 energy_today:
   grid: sensor.grid_energy_today
+  grid_import: sensor.grid_import_today
+  grid_export: sensor.grid_export_today
   solar: sensor.solar_energy_today
   home: sensor.home_energy_today
+  battery_discharge: sensor.battery_discharge_today
 
 # Popup detail rows and simple controls. Sensors render as rows.
 # Locks, switches, buttons, and input buttons render as circular controls.

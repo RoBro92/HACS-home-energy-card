@@ -11,8 +11,8 @@ body:
     id: card_version
     attributes:
       label: Card version
-      description: The installed release, for example v1.0.2.
-      placeholder: v1.0.2
+      description: The installed release, for example v1.0.11.
+      placeholder: v1.0.11
     validations:
       required: true
   - type: input

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.11
+
+- Replaces the duplicate bottom node pills with configurable bottom glance cards.
+- Adds bottom bar types for cost today, cost now, self powered today, grid import/export, battery reserve, battery discharge, sun state, weather, and custom entities.
+- Adds daily cost budget progress support through `costs.today_entity` and `costs.daily_budget`.
+- Adds visual editor controls for five bottom bar slots and the supporting cost, grid, battery, weather, and temperature entities.
+- Removes the visible dashed energy path overlay from the card.
+- Updates the demo, examples, setup guide, and screenshots for public testing.
+
 ## 1.0.10
 
 - Regroups the visual editor into Card, Grid And Home, Solar, EV, Battery, and Cost sections.

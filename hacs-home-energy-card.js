@@ -9,6 +9,7 @@ const DAY_START_HOUR = 6;
 const NIGHT_START_HOUR = 19;
 const MIN_CARD_WIDTH_PX = 320;
 const MIN_CARD_HEIGHT_PX = 180;
+const MAX_BOTTOM_CARDS = 5;
 
 function moduleAsset(path) {
   return new URL(path, MODULE_BASE_URL).href;
@@ -130,6 +131,15 @@ export function formatEnergy(value) {
   const parsed = parseNumber(value);
   if (parsed === null) return "-";
   return `${parsed.toFixed(1)} kWh`;
+}
+
+function formatHours(value) {
+  const parsed = parseNumber(value);
+  if (parsed === null || parsed < 0) return "-";
+  const totalMinutes = Math.round(parsed * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${String(minutes).padStart(2, "0")}m`;
 }
 
 export function formatPercent(value) {
@@ -256,22 +266,26 @@ const DEFAULT_LABELS = {
 const ICONS = {
   grid: "mdi:transmission-tower",
   cost: "mdi:currency-gbp",
+  selfPowered: "mdi:home-lightning-bolt",
   solar: "mdi:solar-power-variant",
   house: "mdi:home",
   ev: "mdi:car-electric",
   battery: "mdi:home-battery",
   sun: "mdi:weather-sunset",
+  weather: "mdi:weather-partly-cloudy",
   entity: "mdi:information-outline",
 };
 
 const COLORS = {
   grid: "#58bfff",
   cost: "#8ee6a5",
+  selfPowered: "#7ee8ff",
   solar: "#ffd15a",
   house: "#ffffff",
   ev: "#50eaff",
   battery: "#56f0d0",
   sun: "#ffb86b",
+  weather: "#a7d8ff",
   entity: "#d9f2ff",
 };
 
@@ -329,6 +343,26 @@ function formatMoneyPerHour(value, currency) {
   return `${prefix}${currency}${Math.abs(parsed).toFixed(2)}/h`;
 }
 
+function formatMoney(value, currency) {
+  const parsed = parseNumber(value);
+  if (parsed === null) return "-";
+  const prefix = parsed < 0 ? "-" : "";
+  return `${prefix}${currency}${Math.abs(parsed).toFixed(2)}`;
+}
+
+function formatTemperature(value, unit = "°C") {
+  const parsed = parseNumber(value);
+  if (parsed === null) return "-";
+  return `${Math.round(parsed * 10) / 10}${unit || "°C"}`;
+}
+
+function progressPercent(value, target) {
+  const parsed = parseNumber(value);
+  const parsedTarget = parseNumber(target);
+  if (parsed === null || parsedTarget === null || parsedTarget <= 0) return null;
+  return Math.max(0, Math.min(100, Math.round((parsed / parsedTarget) * 100)));
+}
+
 function gridCostModel(config, hass, gridWatts) {
   const importing = gridWatts >= 0;
   const rate = rateValue(config, hass, importing ? "import" : "export");
@@ -349,6 +383,144 @@ function gridCostModel(config, hass, gridWatts) {
     displayStatus: importing ? "Import Cost" : "Export Credit",
     valueLabel: formatMoneyPerHour(hourly, currencySymbol(config)),
   };
+}
+
+function costsConfig(config) {
+  return config.costs || config.cost_config || config.costConfig || {};
+}
+
+function costTodayCard(config, hass) {
+  const costs = costsConfig(config);
+  const entity = costs.today_entity || costs.todayEntity || config.entities?.cost_today;
+  const value = parseNumber(stateValue(hass, entity));
+  const budget = parseNumber(costs.daily_budget ?? costs.dailyBudget);
+  return {
+    kind: "cost_today",
+    label: "Cost Today",
+    status: budget ? "Budget" : "Today",
+    value: formatMoney(value, currencySymbol(config)),
+    progress: progressPercent(value, budget),
+    progressLabel: budget ? `${formatMoney(value, currencySymbol(config))} / ${formatMoney(budget, currencySymbol(config))}` : null,
+    icon: ICONS.cost,
+    color: COLORS.cost,
+    detailKind: "grid",
+    entityId: entity,
+  };
+}
+
+function energyTodayEntity(config, key, fallbackGroup, fallbackKey) {
+  const energyToday = config.energy_today || config.energyToday || {};
+  const detailEntities = config.detail_entities || config.detailEntities || {};
+  return energyToday[key] || energyToday[key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())] || detailEntities[fallbackGroup]?.[fallbackKey];
+}
+
+function energyTodayNumber(config, hass, key, fallbackGroup, fallbackKey) {
+  return parseNumber(stateValue(hass, energyTodayEntity(config, key, fallbackGroup, fallbackKey)));
+}
+
+function selfPoweredTodayCard(config, hass) {
+  const home = energyTodayNumber(config, hass, "home", "house", "energy_24h");
+  let imported = energyTodayNumber(config, hass, "grid_import", "grid", "import_24h");
+  if (imported === null) imported = Math.max(0, energyTodayNumber(config, hass, "grid", "grid", "import_24h") ?? 0);
+  const percent = home && home > 0 ? Math.max(0, Math.min(100, Math.round(((home - imported) / home) * 100))) : null;
+  return {
+    kind: "self_powered_today",
+    label: "Self Powered",
+    status: "Today",
+    value: percent === null ? "-" : `${percent}%`,
+    progress: percent,
+    icon: ICONS.selfPowered,
+    color: COLORS.selfPowered,
+    detailKind: "house",
+  };
+}
+
+function gridImportExportCard(config, hass) {
+  const imported = energyTodayNumber(config, hass, "grid_import", "grid", "import_24h");
+  const exported = energyTodayNumber(config, hass, "grid_export", "grid", "export_24h");
+  const importLabel = formatEnergy(imported);
+  const exportLabel = formatEnergy(exported);
+  return {
+    kind: "grid_import_export",
+    label: "Grid Energy",
+    status: "Import / Export",
+    value: `${importLabel.replace(" kWh", "")} / ${exportLabel}`,
+    progress: imported !== null && exported !== null && imported + exported > 0 ? Math.round((exported / (imported + exported)) * 100) : null,
+    icon: ICONS.grid,
+    color: COLORS.grid,
+    detailKind: "grid",
+  };
+}
+
+function batteryReserveCard(model) {
+  const capacity = parseNumber(model.battery.capacityLabel);
+  const soc = parseNumber(model.battery.socLabel);
+  const loadKw = Math.max(0, (parseNumber(model.house.watts) ?? 0) / 1000);
+  const remaining = capacity !== null && soc !== null ? capacity * (soc / 100) : null;
+  const reserveHours = remaining !== null && loadKw > 0.025 ? remaining / loadKw : null;
+  return {
+    kind: "battery_reserve",
+    label: "Battery Reserve",
+    status: "Reserve",
+    value: formatHours(reserveHours),
+    progress: soc,
+    icon: ICONS.battery,
+    color: COLORS.battery,
+    detailKind: "battery",
+  };
+}
+
+function batteryDischargeCard(config, hass) {
+  const entity = energyTodayEntity(config, "battery_discharge", "battery", "discharge_24h");
+  return {
+    kind: "battery_discharge",
+    label: "Battery Discharge",
+    status: "Today",
+    value: formatEnergy(stateValue(hass, entity)),
+    icon: ICONS.battery,
+    color: COLORS.battery,
+    detailKind: "battery",
+    entityId: entity,
+  };
+}
+
+function weatherCard(config, hass) {
+  const entity = config.entities?.weather || config.weather_entity || config.weatherEntity;
+  const temperatureEntity = config.entities?.outdoor_temperature || config.temperature_entity || config.temperatureEntity;
+  const attrs = stateAttributes(hass, entity);
+  const temperature = temperatureEntity ? stateValue(hass, temperatureEntity) : attrs.temperature;
+  const unit = temperatureEntity ? stateAttributes(hass, temperatureEntity).unit_of_measurement : attrs.temperature_unit;
+  const rawState = stateValue(hass, entity);
+  return {
+    kind: "weather",
+    label: "Weather",
+    status: weatherStateLabel(rawState),
+    value: formatTemperature(temperature, unit),
+    icon: ICONS.weather,
+    color: COLORS.weather,
+    entityId: entity || temperatureEntity,
+  };
+}
+
+function weatherStateLabel(value) {
+  const raw = String(value || "unknown").toLowerCase();
+  const labels = {
+    "clear-night": "Clear Night",
+    cloudy: "Cloudy",
+    fog: "Fog",
+    hail: "Hail",
+    lightning: "Lightning",
+    "lightning-rainy": "Lightning Rain",
+    partlycloudy: "Partly Cloudy",
+    pouring: "Pouring",
+    rainy: "Rainy",
+    snowy: "Snowy",
+    "snowy-rainy": "Snowy Rain",
+    sunny: "Sunny",
+    windy: "Windy",
+    "windy-variant": "Windy",
+  };
+  return labels[raw] || titleCaseLabel(raw.replace(/-/g, " ").replace(/_/g, " "));
 }
 
 function formatEventTime(value) {
@@ -505,7 +677,15 @@ function buildActions(config, hass) {
   );
 }
 
-function predefinedBottomCard(type, model) {
+function predefinedBottomCard(type, model, config, hass) {
+  const normalisedType = {
+    cost: "cost_now",
+    current_cost: "cost_now",
+    budget: "cost_today",
+    self_powered: "self_powered_today",
+    grid_energy: "grid_import_export",
+  }[type] || type;
+
   const cards = {
     grid: {
       kind: "grid",
@@ -515,7 +695,7 @@ function predefinedBottomCard(type, model) {
       icon: ICONS.grid,
       color: COLORS.grid,
     },
-    cost: {
+    cost_now: {
       kind: "cost",
       label: "Grid cost",
       status: model.cost.displayStatus,
@@ -524,6 +704,12 @@ function predefinedBottomCard(type, model) {
       color: COLORS.cost,
       detailKind: "grid",
     },
+    cost_today: costTodayCard(config, hass),
+    self_powered_today: selfPoweredTodayCard(config, hass),
+    grid_import_export: gridImportExportCard(config, hass),
+    battery_reserve: model.visible.battery ? batteryReserveCard(model) : null,
+    battery_discharge: model.visible.battery ? batteryDischargeCard(config, hass) : null,
+    weather: weatherCard(config, hass),
     solar: {
       kind: "solar",
       label: model.solar.label,
@@ -557,12 +743,12 @@ function predefinedBottomCard(type, model) {
       color: COLORS.battery,
     },
   };
-  return cards[type] || null;
+  return cards[normalisedType] || null;
 }
 
 function customBottomCard(item, config, hass, model) {
   const type = typeof item === "string" ? item : item?.type;
-  if (!type) return null;
+  if (!type || type === "none") return null;
   if (["solar", "ev", "battery"].includes(type) && !model.visible[type]) return null;
   if (type === "sun") return { ...sunCardModel(config, hass), ...(typeof item === "object" ? item : {}) };
   if (type === "entity" && typeof item === "object" && item.entity) {
@@ -576,7 +762,7 @@ function customBottomCard(item, config, hass, model) {
       entityId: item.entity,
     };
   }
-  const card = predefinedBottomCard(type, model);
+  const card = predefinedBottomCard(type, model, config, hass);
   if (!card) return null;
   return typeof item === "object"
     ? {
@@ -585,21 +771,38 @@ function customBottomCard(item, config, hass, model) {
         status: item.status || card.status,
         icon: item.icon || card.icon,
         color: item.color || card.color,
+        detailKind: item.detailKind || item.detail_kind || card.detailKind,
       }
     : card;
 }
 
-function buildBottomCards(config, hass, model) {
+function bottomBarLimit(config) {
+  const parsed = parseNumber(config.bottom_bar_limit ?? config.bottomBarLimit);
+  if (parsed === null) return MAX_BOTTOM_CARDS;
+  return Math.max(1, Math.min(MAX_BOTTOM_CARDS, Math.round(parsed)));
+}
+
+function configuredBottomBar(config) {
   const configured = config.bottom_bar || config.bottomBar;
+  return Array.isArray(configured) ? configured : null;
+}
+
+function buildBottomCards(config, hass, model, limit = true) {
+  const configured = config.bottom_bar || config.bottomBar;
+  const maxCards = limit ? bottomBarLimit(config) : Number.POSITIVE_INFINITY;
+  let cards;
   if (Array.isArray(configured) && configured.length) {
-    return configured.map((item) => customBottomCard(item, config, hass, model)).filter(Boolean);
+    cards = configured.map((item) => customBottomCard(item, config, hass, model)).filter(Boolean);
+  } else {
+    cards = [
+      predefinedBottomCard("cost_today", model, config, hass),
+      predefinedBottomCard("self_powered_today", model, config, hass),
+      predefinedBottomCard("grid_import_export", model, config, hass),
+      model.visible.battery ? predefinedBottomCard("battery_reserve", model, config, hass) : null,
+      predefinedBottomCard("sun", model, config, hass) || sunCardModel(config, hass),
+    ].filter(Boolean);
   }
-  return [
-    predefinedBottomCard("grid", model),
-    model.visible.solar ? predefinedBottomCard("solar", model) : null,
-    model.visible.ev ? predefinedBottomCard("ev", model) : null,
-    model.visible.battery ? predefinedBottomCard("battery", model) : null,
-  ].filter(Boolean);
+  return cards.slice(0, maxCards);
 }
 
 function labelFromDetailKey(key) {
@@ -895,7 +1098,12 @@ export function buildEnergyModel(config = {}, hass) {
     flows: [],
   };
   model.details = buildDetailGroups(config, hass, model, energyToday);
-  model.bottomCards = buildBottomCards(config, hass, model);
+  model.availableBottomCards = [
+    ...buildBottomCards(config, hass, model, false),
+    customBottomCard({ type: "weather" }, config, hass, model),
+    customBottomCard({ type: "battery_discharge" }, config, hass, model),
+  ].filter(Boolean);
+  model.bottomCards = buildBottomCards(config, hass, model, true);
 
   // SVG paths are defined in a stable 100x58 viewBox, so the same paths scale cleanly
   // across wall panels, tablets, and fullscreen dashboards.
@@ -1109,70 +1317,6 @@ class HacsHomeEnergyCard extends LitElement {
       inset: 0;
     }
 
-    .flows {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      overflow: visible;
-      z-index: 1;
-      filter: drop-shadow(0 0 14px rgba(92, 226, 255, .42));
-      pointer-events: none;
-    }
-
-    .flow-base {
-      fill: none;
-      stroke: rgba(230, 247, 255, .26);
-      stroke-width: 1.9;
-      stroke-linecap: round;
-      vector-effect: non-scaling-stroke;
-    }
-
-    .flow-line {
-      fill: none;
-      stroke: var(--flow-color);
-      stroke-width: 2.8;
-      stroke-linecap: round;
-      stroke-dasharray: 9 12;
-      animation: flow var(--flow-speed, 4s) linear infinite;
-      opacity: .9;
-      vector-effect: non-scaling-stroke;
-    }
-
-    .flow-line.is-active {
-      opacity: 1;
-      filter: drop-shadow(0 0 6px var(--flow-color));
-    }
-
-    .flow-line.is-idle {
-      animation: none;
-      opacity: .24;
-      stroke-dasharray: 1 10;
-    }
-
-    .flow-line.is-reverse {
-      animation-direction: reverse;
-    }
-
-    @keyframes flow {
-      to {
-        stroke-dashoffset: -42;
-      }
-    }
-
-    .flow-particle {
-      fill: var(--flow-color);
-      opacity: .94;
-      filter: drop-shadow(0 0 8px var(--flow-color));
-    }
-
-    .flow-pulse {
-      fill: rgba(255, 255, 255, .86);
-      stroke: var(--flow-color);
-      stroke-width: .28;
-      filter: drop-shadow(0 0 10px var(--flow-color));
-    }
-
     .node {
       position: absolute;
       z-index: 2;
@@ -1251,7 +1395,7 @@ class HacsHomeEnergyCard extends LitElement {
       bottom: var(--energy-card-padding);
       z-index: 3;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr));
       gap: clamp(8px, 1.6cqw, 16px);
     }
 
@@ -1261,7 +1405,7 @@ class HacsHomeEnergyCard extends LitElement {
       grid-template-columns: auto 1fr;
       gap: 10px;
       align-items: center;
-      padding: 12px 14px;
+      padding: 10px 12px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, .17);
       background: rgba(5, 14, 20, .66);
@@ -1287,10 +1431,8 @@ class HacsHomeEnergyCard extends LitElement {
 
     .pill-main {
       margin-top: 3px;
-      display: flex;
-      gap: 8px;
-      align-items: baseline;
-      justify-content: space-between;
+      display: grid;
+      gap: 1px;
       min-width: 0;
     }
 
@@ -1299,14 +1441,34 @@ class HacsHomeEnergyCard extends LitElement {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: clamp(14px, 1.7cqw, 18px);
+      font-size: clamp(13px, 1.55cqw, 17px);
       font-weight: 650;
     }
 
     .pill-value {
       color: #ffffff;
-      font-size: clamp(13px, 1.4cqw, 16px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: clamp(12px, 1.25cqw, 15px);
       white-space: nowrap;
+    }
+
+    .pill-progress {
+      display: block;
+      height: 3px;
+      margin-top: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .16);
+    }
+
+    .pill-progress span {
+      display: block;
+      width: var(--pill-progress, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--pill-color, var(--energy-card-accent));
+      box-shadow: 0 0 12px color-mix(in srgb, var(--pill-color, #58d5ff), transparent 30%);
     }
 
     .detail-backdrop {
@@ -1708,10 +1870,6 @@ class HacsHomeEnergyCard extends LitElement {
         --energy-card-padding: 9px;
       }
 
-      .flows {
-        opacity: .55;
-      }
-
       .node {
         min-width: 58px;
         padding: 4px 5px;
@@ -1914,48 +2072,7 @@ class HacsHomeEnergyCard extends LitElement {
   }
 
   renderFlows(model) {
-    // Each flow path is drawn twice: a faint static base line and a dashed glowing line.
-    // Active paths also get larger pulse markers so direction remains visible on busy backgrounds.
-    return html`
-      <svg class="flows" viewBox="0 0 100 58" preserveAspectRatio="none" aria-hidden="true">
-        ${model.flows.map((item) => {
-          const reversed = item.direction === "export" || item.direction === "discharging";
-          return html`
-            <path class="flow-base" d=${item.path}></path>
-            <path
-              class="flow-line ${item.active ? "is-active" : "is-idle"} ${reversed ? "is-reverse" : ""}"
-              style="--flow-color:${item.color}; --flow-speed:${item.speed || 8}s"
-              d=${item.path}
-            ></path>
-            ${item.active
-              ? html`
-                  <circle class="flow-particle flow-pulse" r="1.05" style="--flow-color:${item.color}">
-                    <animateMotion
-                      dur=${`${Math.max(1.6, item.speed || 4)}s`}
-                      repeatCount="indefinite"
-                      path=${item.path}
-                      keyPoints=${reversed ? "1;0" : "0;1"}
-                      keyTimes="0;1"
-                      calcMode="linear"
-                    ></animateMotion>
-                  </circle>
-                  <circle class="flow-particle" r="0.72" style="--flow-color:${item.color}; opacity:.68">
-                    <animateMotion
-                      dur=${`${Math.max(1.6, item.speed || 4)}s`}
-                      begin="-0.8s"
-                      repeatCount="indefinite"
-                      path=${item.path}
-                      keyPoints=${reversed ? "1;0" : "0;1"}
-                      keyTimes="0;1"
-                      calcMode="linear"
-                    ></animateMotion>
-                  </circle>
-                `
-              : html``}
-          `;
-        })}
-      </svg>
-    `;
+    return html``;
   }
 
   renderNode(kind, label, value, status, extra) {
@@ -1994,6 +2111,9 @@ class HacsHomeEnergyCard extends LitElement {
             <span class="pill-status">${card.status}</span>
             <span class="pill-value">${card.value}</span>
           </span>
+          ${card.progress !== null && card.progress !== undefined
+            ? html`<span class="pill-progress" title=${card.progressLabel || `${card.progress}%`}><span style=${`--pill-progress:${card.progress}%`}></span></span>`
+            : html``}
         </span>
       </button>
     `;
@@ -2061,11 +2181,12 @@ class HacsHomeEnergyCard extends LitElement {
   }
 
   openPill(card) {
-    if (card.entityId) {
-      this.openMoreInfo(card.entityId);
+    if (card.detailKind) {
+      this.openDetail(card.detailKind);
       return;
     }
-    this.openDetail(card.detailKind || card.kind);
+    if (card.entityId) this.openMoreInfo(card.entityId);
+    else this.openDetail(card.kind);
   }
 
   openDetail(kind) {
@@ -2153,6 +2274,8 @@ const EDITOR_FIELD_DEFS = [
   { name: "ev_label", label: "EV Label", path: ["labels", "ev"], selector: { text: {} } },
   { name: "battery_label", label: "Battery Label", path: ["labels", "battery"], selector: { text: {} } },
   { name: "sun", label: "Sun Entity", path: ["entities", "sun"], selector: { entity: { domain: "sun" } } },
+  { name: "weather", label: "Weather Entity", path: ["entities", "weather"], selector: { entity: { domain: "weather" } } },
+  { name: "outdoor_temperature", label: "Outdoor Temperature", path: ["entities", "outdoor_temperature"], selector: { entity: { domain: "sensor" } } },
   { name: "grid_power", label: "Grid Import Export Power", path: ["entities", "grid_power"], selector: { entity: { domain: "sensor" } } },
   { name: "house_power", label: "Home Power Usage", path: ["entities", "house_power"], selector: { entity: { domain: "sensor" } } },
   { name: "solar_power", label: "Solar Producing Power", path: ["entities", "solar_power"], selector: { entity: { domain: "sensor" } } },
@@ -2164,8 +2287,11 @@ const EDITOR_FIELD_DEFS = [
   { name: "ev_soc", label: "EV State Of Charge", path: ["entities", "ev_soc"], selector: { entity: { domain: "sensor" } } },
   { name: "ev_charging_state", label: "EV Charging State", path: ["entities", "ev_charging_state"], selector: { entity: { domain: ["binary_sensor", "sensor"] } } },
   { name: "grid_energy_today", label: "Grid Energy Today", path: ["energy_today", "grid"], selector: { entity: { domain: "sensor" } } },
+  { name: "grid_import_today", label: "Grid Import Today", path: ["energy_today", "grid_import"], selector: { entity: { domain: "sensor" } } },
+  { name: "grid_export_today", label: "Grid Export Today", path: ["energy_today", "grid_export"], selector: { entity: { domain: "sensor" } } },
   { name: "solar_energy_today", label: "Solar Energy Today", path: ["energy_today", "solar"], selector: { entity: { domain: "sensor" } } },
   { name: "home_energy_today", label: "Home Energy Today", path: ["energy_today", "home"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_discharge_today", label: "Battery Discharge Today", path: ["energy_today", "battery_discharge"], selector: { entity: { domain: "sensor" } } },
   { name: "grid_node_extra", label: "Grid Node Extra", path: ["node_info", "grid", "entity"], selector: { entity: { domain: "sensor" } } },
   { name: "home_node_extra", label: "Home Node Extra", path: ["node_info", "house", "entity"], selector: { entity: { domain: "sensor" } } },
   { name: "solar_node_extra", label: "Solar Node Extra", path: ["node_info", "solar", "entity"], selector: { entity: { domain: "sensor" } } },
@@ -2176,6 +2302,8 @@ const EDITOR_FIELD_DEFS = [
   { name: "import_rate_entity", label: "Import Rate Entity", path: ["tariffs", "import_rate_entity"], selector: { entity: { domain: "sensor" } } },
   { name: "export_rate_entity", label: "Export Rate Entity", path: ["tariffs", "export_rate_entity"], selector: { entity: { domain: "sensor" } } },
   { name: "currency", label: "Currency", path: ["tariffs", "currency"], selector: { text: {} } },
+  { name: "cost_today_entity", label: "Cost Today Entity", path: ["costs", "today_entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "cost_daily_budget", label: "Daily Cost Budget", path: ["costs", "daily_budget"], selector: { number: { min: 0, step: 0.01, mode: "box" } } },
   { name: "solar_pv_voltage", label: "Solar PV Voltage", path: ["detail_entities", "solar", "pv_voltage"], selector: { entity: { domain: "sensor" } } },
   { name: "solar_pv_current", label: "Solar PV Current", path: ["detail_entities", "solar", "pv_current"], selector: { entity: { domain: "sensor" } } },
   { name: "solar_energy_24h", label: "Solar Energy 24h", path: ["detail_entities", "solar", "energy_24h"], selector: { entity: { domain: "sensor" } } },
@@ -2195,6 +2323,28 @@ const EDITOR_FIELD_DEFS = [
   { name: "battery_current", label: "Battery Current", path: ["detail_entities", "battery", "current"], selector: { entity: { domain: "sensor" } } },
   { name: "battery_charge_24h", label: "Battery Charge 24h", path: ["detail_entities", "battery", "charge_24h"], selector: { entity: { domain: "sensor" } } },
   { name: "battery_discharge_24h", label: "Battery Discharge 24h", path: ["detail_entities", "battery", "discharge_24h"], selector: { entity: { domain: "sensor" } } },
+  ...Array.from({ length: MAX_BOTTOM_CARDS }, (_, index) => ({
+    name: `bottom_bar_slot_${index + 1}`,
+    label: `Bottom Bar Slot ${index + 1}`,
+    bottomSlot: index,
+    selector: {
+      select: {
+        mode: "dropdown",
+        options: [
+          { value: "none", label: "None" },
+          { value: "cost_today", label: "Cost Today" },
+          { value: "cost_now", label: "Cost Now" },
+          { value: "self_powered_today", label: "Self Powered Today" },
+          { value: "grid_import_export", label: "Grid Import Export" },
+          { value: "battery_reserve", label: "Battery Reserve" },
+          { value: "battery_discharge", label: "Battery Discharge Today" },
+          { value: "sun", label: "Sun State" },
+          { value: "weather", label: "Weather Temperature" },
+        ],
+      },
+    },
+    default: index === 0 ? "cost_today" : index === 1 ? "self_powered_today" : index === 2 ? "grid_import_export" : index === 3 ? "battery_reserve" : "sun",
+  })),
 ];
 
 const EDITOR_SECTION_GROUPS = [
@@ -2219,11 +2369,15 @@ const EDITOR_SECTION_GROUPS = [
     label: "Grid And Home",
     fields: [
       "sun",
+      "weather",
+      "outdoor_temperature",
       "grid_label",
       "house_label",
       "grid_power",
       "house_power",
       "grid_energy_today",
+      "grid_import_today",
+      "grid_export_today",
       "home_energy_today",
       "grid_node_extra",
       "home_node_extra",
@@ -2274,6 +2428,7 @@ const EDITOR_SECTION_GROUPS = [
       "battery_soc",
       "battery_capacity",
       "battery_node_extra",
+      "battery_discharge_today",
       "battery_voltage",
       "battery_current",
       "battery_charge_24h",
@@ -2282,7 +2437,11 @@ const EDITOR_SECTION_GROUPS = [
   },
   {
     label: "Cost",
-    fields: ["import_rate", "export_rate", "import_rate_entity", "export_rate_entity", "currency"],
+    fields: ["import_rate", "export_rate", "import_rate_entity", "export_rate_entity", "currency", "cost_today_entity", "cost_daily_budget"],
+  },
+  {
+    label: "Bottom Bar",
+    fields: ["bottom_bar_slot_1", "bottom_bar_slot_2", "bottom_bar_slot_3", "bottom_bar_slot_4", "bottom_bar_slot_5"],
   },
 ];
 
@@ -2323,6 +2482,13 @@ function deleteConfigPath(config, path) {
 function editorDataFromConfig(config) {
   const data = {};
   for (const field of EDITOR_FIELD_DEFS) {
+    if (field.bottomSlot !== undefined) {
+      const configured = configuredBottomBar(config);
+      const item = configured?.[field.bottomSlot];
+      const type = typeof item === "string" ? item : item?.type;
+      data[field.name] = type || field.default || "none";
+      continue;
+    }
     const value = readConfigPath(config, field.path);
     if (value !== undefined && value !== null) data[field.name] = value;
     else if (field.default !== undefined) data[field.name] = field.default;
@@ -2337,6 +2503,7 @@ const EDITOR_SYSTEM_TOGGLES = {
 };
 
 function editorSystemForField(field) {
+  if (!field.path) return null;
   if (Object.values(EDITOR_SYSTEM_TOGGLES).includes(field.name)) return null;
   if (field.system) return field.system;
   for (const system of Object.keys(EDITOR_SYSTEM_TOGGLES)) {
@@ -2373,6 +2540,7 @@ function editorSectionsForConfig(config) {
 function editorDataToConfig(previousConfig, data) {
   const config = cloneConfigForEditor(previousConfig);
   for (const field of EDITOR_FIELD_DEFS) {
+    if (field.bottomSlot !== undefined) continue;
     const value = data[field.name];
     const empty = value === "" || value === undefined || value === null || value === field.deleteWhen;
     if (empty) {
@@ -2380,6 +2548,21 @@ function editorDataToConfig(previousConfig, data) {
       continue;
     }
     writeConfigPath(config, field.path, value);
+  }
+  const bottomSlotFields = EDITOR_FIELD_DEFS.filter((field) => field.bottomSlot !== undefined);
+  if (bottomSlotFields.some((field) => Object.hasOwn(data, field.name))) {
+    const previousItems = configuredBottomBar(previousConfig) || [];
+    const nextItems = bottomSlotFields
+      .map((field) => {
+        const type = data[field.name] || "none";
+        if (type === "none") return null;
+        const previous = previousItems[field.bottomSlot];
+        const base = previous && typeof previous === "object" ? { ...previous } : {};
+        return { ...base, type };
+      })
+      .filter(Boolean);
+    if (nextItems.length) config.bottom_bar = nextItems;
+    else deleteConfigPath(config, ["bottom_bar"]);
   }
   return config;
 }
@@ -2463,7 +2646,7 @@ if (typeof window !== "undefined") {
   const cardPickerEntry = {
     type: "hacs-home-energy-card",
     name: "HACS Home Energy Card",
-    description: "Cinematic home energy dashboard with solar, grid, EV, and battery flows.",
+    description: "Cinematic home energy dashboard with solar, grid, EV, battery, cost, and weather glance cards.",
     preview: true,
     documentationURL: "https://github.com/RoBro92/HACS-home-energy-card/blob/main/docs/setup.md",
   };

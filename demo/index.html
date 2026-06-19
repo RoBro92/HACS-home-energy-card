@@ -106,11 +106,13 @@
           const icons = {
             "mdi:transmission-tower": "⌁",
             "mdi:currency-gbp": "£",
+            "mdi:home-lightning-bolt": "⌂",
             "mdi:solar-power-variant": "☀",
             "mdi:car-electric": "⚡",
             "mdi:home-battery": "▰",
             "mdi:home": "⌂",
             "mdi:weather-sunset": "◐",
+            "mdi:weather-partly-cloudy": "☁",
             "mdi:information-outline": "i",
             "mdi:gesture-tap-button": "◎",
             "mdi:flash": "↯",
@@ -140,7 +142,7 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../hacs-home-energy-card.js?v=preview-19");
+      await import("../hacs-home-energy-card.js?v=preview-20");
 
       const card = document.querySelector("hacs-home-energy-card");
       const evToggle = document.querySelector("#evToggle");
@@ -215,14 +217,21 @@
           import_rate_entity: "sensor.current_import_rate",
           export_rate_entity: "sensor.current_export_rate"
         },
+        costs: {
+          today_entity: "sensor.energy_cost_today",
+          daily_budget: 5
+        },
         bottom_bar: [
-          { type: "cost", label: "Grid cost" },
-          { type: "sun" },
-          "solar",
-          "ev",
-          "battery"
+          { type: "cost_today" },
+          { type: "self_powered_today" },
+          { type: "grid_import_export" },
+          { type: "battery_reserve" },
+          { type: "weather" }
         ],
         entities: {
+          sun: "sun.sun",
+          weather: "weather.home",
+          outdoor_temperature: "sensor.outdoor_temperature",
           grid_power: "sensor.grid_power_w",
           solar_power: "sensor.solar_power_w",
           house_power: "sensor.house_power_w",
@@ -239,8 +248,11 @@
         },
         energy_today: {
           grid: "sensor.grid_energy_today",
+          grid_import: "sensor.grid_import_today",
+          grid_export: "sensor.grid_export_today",
           solar: "sensor.solar_energy_today",
-          home: "sensor.home_energy_today"
+          home: "sensor.home_energy_today",
+          battery_discharge: "sensor.battery_discharge_today"
         },
         detail_entities: {
           solar: {
@@ -318,8 +330,14 @@
             "sensor.current_import_rate": sensor("0.34", { unit_of_measurement: "GBP/kWh" }),
             "sensor.current_export_rate": sensor("0.15", { unit_of_measurement: "GBP/kWh" }),
             "sensor.grid_energy_today": sensor("7.8"),
+            "sensor.grid_import_today": sensor("9.6", { unit_of_measurement: "kWh" }),
+            "sensor.grid_export_today": sensor("2.1", { unit_of_measurement: "kWh" }),
             "sensor.solar_energy_today": sensor("22.4"),
             "sensor.home_energy_today": sensor("15.9"),
+            "sensor.energy_cost_today": sensor("2.85", { unit_of_measurement: "GBP" }),
+            "sensor.battery_discharge_today": sensor("7.2", { unit_of_measurement: "kWh" }),
+            "sensor.outdoor_temperature": sensor("18.4", { unit_of_measurement: "°C" }),
+            "weather.home": sensor("partlycloudy", { temperature: 18.4, temperature_unit: "°C" }),
             "sensor.solar_efficiency": sensor(Math.round((solar / 5000) * 100), { unit_of_measurement: "%" }),
             "sensor.ev_range": sensor("168", { unit_of_measurement: "mi" }),
             "sensor.battery_temperature": sensor("22", { unit_of_measurement: "°C" }),
