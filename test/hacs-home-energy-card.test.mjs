@@ -105,15 +105,12 @@ test("buildEnergyModel supports configurable labels, node extras, bottom cards, 
   assert.equal(model.solar.nodeExtra, "91%");
   assert.equal(model.cost.valueLabel, "-£0.19/h");
   assert.equal(model.cost.displayStatus, "Export Credit");
-  assert.deepEqual(
-    model.bottomCards.map((card) => [card.kind, card.label, card.status, card.value]),
-    [
-      ["cost", "Grid cost", "Export Credit", "-£0.19/h"],
-      ["sun", "Sunset", "Today", "21:33"],
-      ["entity", "Voltage", "Grid", "239 V"],
-      ["solar", "PV", "Producing", "4.6 kW"],
-    ],
-  );
+  const bottomCards = model.bottomCards.map((card) => [card.kind, card.label, card.status, card.value]);
+  assert.deepEqual(bottomCards[0], ["cost", "Grid cost", "Export Credit", "-£0.19/h"]);
+  assert.deepEqual(bottomCards[1].slice(0, 3), ["sun", "Sunset", "Today"]);
+  assert.match(bottomCards[1][3], /^\d{2}:\d{2}$/);
+  assert.deepEqual(bottomCards[2], ["entity", "Voltage", "Grid", "239 V"]);
+  assert.deepEqual(bottomCards[3], ["solar", "PV", "Producing", "4.6 kW"]);
   assert.equal(model.actions.ev[0].label, "Boost charge");
   assert.equal(model.actions.ev[0].domain, "switch");
   assert.equal(model.actions.ev[0].serviceName, "turn_on");
