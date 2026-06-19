@@ -1,7 +1,11 @@
 type: custom:hacs-home-energy-card
+
+# Setup toggles can be booleans or Home Assistant helpers.
 show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
+
+# Layout and sizing.
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
 show_title: false
@@ -13,6 +17,7 @@ card_height: 506
 min_width: 320
 min_height: 180
 
+# Floating node and panel names.
 labels:
   grid: Grid
   gridCard: Grid cost
@@ -22,11 +27,13 @@ labels:
   evCard: EV
   battery: Battery
 
+# Cost calculation.
 tariffs:
   currency: £
   import_rate_entity: sensor.current_import_rate
   export_rate_entity: sensor.current_export_rate
 
+# Bottom glance cards.
 bottom_bar:
   - type: cost
     label: Grid cost
@@ -35,6 +42,7 @@ bottom_bar:
   - ev
   - battery
 
+# Main energy sensors.
 entities:
   sun: sun.sun
   grid_power: sensor.grid_power_w
@@ -46,6 +54,7 @@ entities:
   battery_power: sensor.battery_power_w
   battery_soc: sensor.battery_soc
 
+# Optional compact values shown on floating nodes.
 node_info:
   solar:
     entity: sensor.solar_efficiency
@@ -59,6 +68,8 @@ energy_today:
   solar: sensor.solar_energy_today
   home: sensor.home_energy_today
 
+# Popup detail rows and simple controls. Sensors render as rows.
+# Locks, switches, buttons, and input buttons render as circular controls.
 detail_entities:
   solar:
     pv_voltage: sensor.solar_pv_voltage
@@ -71,22 +82,19 @@ detail_entities:
   house:
     energy_24h: sensor.home_energy_24h
   ev:
+    range: sensor.ev_range
+    inside_temperature: sensor.ev_inside_temperature
+    odometer: sensor.ev_odometer
     energy_24h: sensor.ev_energy_24h
     voltage: sensor.ev_voltage
     current: sensor.ev_current
+    lock: lock.ev
+    boost:
+      label: Boost
+      entity: switch.ev_boost
+      icon: mdi:flash
   battery:
     voltage: sensor.battery_voltage
     current: sensor.battery_current
     charge_24h: sensor.battery_charge_24h
     discharge_24h: sensor.battery_discharge_24h
-
-actions:
-  ev:
-    - label: Boost charge
-      service: switch.turn_on
-      target:
-        entity_id: switch.ev_boost
-    - label: Unlock
-      service: lock.unlock
-      target:
-        entity_id: lock.ev

@@ -69,7 +69,7 @@ HACS installs the card and bundled background images automatically. Hard refresh
 - Animation speed scales with the current power value.
 - Import/export and charge/discharge direction handling.
 - Bottom status bar with Electricity, Solar, Electric Vehicle, and Battery pills.
-- Tap or click on major elements opens an in card detail panel with optional extra sensors.
+- Tap or click on major elements opens an in card detail panel with optional extra sensors and control buttons.
 - Uses CSS variables so Card Mod can override sizing, radius, colors, and shadow.
 
 ## Basic Usage
@@ -142,6 +142,15 @@ detail_entities:
     pv_current: sensor.solar_pv_current
     energy_week: sensor.solar_energy_week
     energy_month: sensor.solar_energy_month
+  ev:
+    range: sensor.ev_range
+    inside_temperature: sensor.ev_inside_temperature
+    odometer: sensor.ev_odometer
+    lock: lock.ev
+    boost:
+      label: Boost
+      entity: switch.ev_boost
+      icon: mdi:flash
 ```
 
 The bundled backgrounds load automatically when the card and images are installed together through HACS. Use `backgrounds` only when you want to override the provided images.
@@ -160,7 +169,7 @@ The README is a quick start. Detailed setup is split into focused docs and examp
 - Use `show_ev`, `show_solar`, and `show_battery` with booleans for a fixed dashboard, or helper entities for reusable dashboards.
 - Keep `show_title: false` and `show_daily_summary: false` for the clean visual layout shown above.
 - Leave `card_width` and `card_height` blank for a responsive card, or set pixel values when using a fixed wall panel or kiosk layout.
-- Add `detail_entities` only for sensors you actually have; missing detail rows are ignored.
+- Add `detail_entities` only for entities you actually have. Sensors become detail rows, while lock, switch, button, and input button entities become circular controls.
 - Use `bottom_bar` to choose glance cards such as grid cost, sunrise/sunset, solar, EV, battery, or any custom entity.
 
 ## Config
@@ -197,7 +206,7 @@ The README is a quick start. Detailed setup is split into focused docs and examp
 | `tariffs.import_rate/export_rate` | No | Fixed import/export rates per kWh for grid cost calculations. |
 | `tariffs.import_rate_entity/export_rate_entity` | No | Dynamic rate sensors for multiple tariff providers. These override fixed rates when available. |
 | `tariffs.currency` | No | Currency symbol for grid cost. Defaults to `£`. |
-| `actions.<group>[]` | No | Optional Home Assistant service call buttons shown in a detail panel, useful for EV lock or unlock and boost charging. |
+| `actions.<group>[]` | No | Optional Home Assistant service call buttons shown in a detail panel for custom service calls. Simple lock, switch, button, and input button entities can also be added directly under `detail_entities`. |
 | `entities.sun` | No | Sun entity for day/night switching. Defaults to `sun.sun`; falls back to local time if unavailable. |
 | `entities.grid_power` | Yes | Current grid power in W. Positive is importing, negative is exporting. |
 | `entities.solar_power` | When solar shown | Current solar production in W. |
@@ -212,7 +221,7 @@ The README is a quick start. Detailed setup is split into focused docs and examp
 | `energy_today.grid` | No | Daily grid energy sensor in kWh. |
 | `energy_today.solar` | No | Daily solar energy sensor in kWh. |
 | `energy_today.home` | No | Daily home energy sensor in kWh. |
-| `detail_entities.<group>.<key>` | No | Extra rows shown in the in card detail modal. Groups are `grid`, `solar`, `house`, `ev`, and `battery`. |
+| `detail_entities.<group>.<key>` | No | Extra entities shown in the in card detail modal. Sensor style entities render as rows. Lock, switch, button, and input button entities render as circular action buttons. Groups are `grid`, `solar`, `house`, `ev`, and `battery`. |
 
 ## Background Selection
 

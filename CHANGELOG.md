@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.7
+
+- Adds automatic detail panel controls for lock, switch, button, and input button entities added under `detail_entities`.
+- Supports extra EV popup rows such as range, inside temperature, odometer, and any other user supplied entity.
+- Improves desktop detail panel contrast so title, values, and the close button remain visible without hover.
+- Adjusts narrow preview node positions so the card picker and visual editor preview do not overlap as easily.
+- Updates setup examples with clearer sections for setup toggles, main sensors, node extras, popup details, and controls.
+
 ## 1.0.6
 
 - Replaces the blank custom editor fields with native Home Assistant form selectors and entity dropdowns.

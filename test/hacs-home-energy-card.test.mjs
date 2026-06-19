@@ -23,7 +23,12 @@ const hass = {
     "sensor.house_power_w": { state: "2610" },
     "sensor.ev_power_w": { state: "7200" },
     "sensor.ev_soc": { state: "62" },
+    "sensor.ev_range": { state: "214", attributes: { unit_of_measurement: "mi" } },
+    "sensor.ev_inside_temperature": { state: "21.5", attributes: { unit_of_measurement: "°C" } },
+    "sensor.ev_odometer": { state: "12842", attributes: { unit_of_measurement: "mi" } },
     "binary_sensor.ev_charging": { state: "on" },
+    "lock.ev": { state: "locked", attributes: { friendly_name: "EV Lock" } },
+    "switch.ev_boost": { state: "off", attributes: { friendly_name: "EV Boost" } },
     "sensor.battery_power_w": { state: "-1450" },
     "sensor.battery_soc": { state: "86" },
     "sensor.battery_capacity_kwh": { state: "13.5", attributes: { unit_of_measurement: "kWh" } },
@@ -145,6 +150,49 @@ test("buildEnergyModel hides configured optional bottom cards when their systems
     model.bottomCards.map((card) => card.kind),
     ["cost", "sun", "entity"],
   );
+});
+
+test("buildEnergyModel turns extra detail sensors into rows and controllable entities into buttons", () => {
+  const model = buildEnergyModel(
+    {
+      show_ev: true,
+      detail_entities: {
+        ev: {
+          range: "sensor.ev_range",
+          inside_temperature: "sensor.ev_inside_temperature",
+          odometer: "sensor.ev_odometer",
+          lock: "lock.ev",
+          boost: {
+            label: "Boost",
+            entity: "switch.ev_boost",
+            icon: "mdi:flash",
+          },
+        },
+      },
+      entities: {
+        grid_power: "sensor.grid_power_w",
+        house_power: "sensor.house_power_w",
+        ev_power: "sensor.ev_power_w",
+        ev_soc: "sensor.ev_soc",
+        ev_charging_state: "binary_sensor.ev_charging",
+      },
+    },
+    hass,
+  );
+
+  const rowLabels = model.details.ev.map((row) => row.label);
+  const rowValues = Object.fromEntries(model.details.ev.map((row) => [row.label, row.value]));
+  const actionLabels = model.actions.ev.map((action) => action.label);
+
+  assert.ok(rowLabels.includes("Range"));
+  assert.ok(rowLabels.includes("Inside Temperature"));
+  assert.ok(rowLabels.includes("Odometer"));
+  assert.equal(rowValues.Range, "214 mi");
+  assert.equal(rowValues.Odometer, "12842 mi");
+  assert.ok(actionLabels.includes("Unlock"));
+  assert.ok(actionLabels.includes("Boost"));
+  assert.equal(model.actions.ev.find((action) => action.label === "Unlock").service, "lock.unlock");
+  assert.equal(model.actions.ev.find((action) => action.label === "Boost").service, "switch.toggle");
 });
 
 test("formatPower keeps watts for small values and switches to kW for larger values", () => {

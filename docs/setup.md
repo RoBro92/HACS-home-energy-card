@@ -39,7 +39,7 @@ For the quickest setup, configure only `entities.grid_power` and `entities.house
 
 The default layout keeps the background clear: floating nodes show compact live values, the bottom bar shows live status, and the top daily summary is hidden.
 
-Clicking a floating node or bottom bar item opens an in card detail panel. The default rows show the core value for that group, and `detail_entities` adds extra rows such as voltage, current, and longer energy totals. Rows backed by entities still open the Home Assistant more info dialog when clicked.
+Clicking a floating node or bottom bar item opens an in card detail panel. The default rows show the core value for that group, and `detail_entities` adds extra rows such as voltage, current, range, odometer, and longer energy totals. Sensor style rows open the Home Assistant more info dialog when clicked. Lock, switch, button, and input button entities render as circular controls at the bottom of the panel.
 
 | Field | Default | Notes |
 | --- | --- | --- |
@@ -184,16 +184,26 @@ Enable EV with `show_ev: true` or an entity that is on.
 | `entities.ev_soc` | % | EV state of charge. |
 | `entities.ev_charging_state` | state or binary | `on`, `true`, or `charging` displays as charging. `off`, `false`, or `not_charging` displays as not charging. Other states are shown as readable text. |
 
-EV modal detail rows can be added with:
+EV modal detail rows and controls can be added with:
 
 ```yaml
 detail_entities:
   ev:
+    range: sensor.ev_range
+    inside_temperature: sensor.ev_inside_temperature
+    odometer: sensor.ev_odometer
     voltage: sensor.ev_voltage
     current: sensor.ev_current
     energy_24h: sensor.ev_energy_24h
     energy_week: sensor.ev_energy_week
+    lock: lock.ev
+    boost:
+      label: Boost
+      entity: switch.ev_boost
+      icon: mdi:flash
 ```
+
+Any sensor, binary sensor, or other read only entity added under `detail_entities` is shown as a value row. Lock, switch, button, and input button entities become action buttons automatically. For example a locked EV lock entity shows a green `Unlock` button, while an unlocked lock shows a red `Lock` button.
 
 ## Optional Grid And Home Detail Sensors
 
@@ -225,7 +235,19 @@ The card also accepts custom keys under each detail group. Unknown keys are conv
 
 ## Optional Detail Panel Actions
 
-Detail panels can show quick action buttons. Actions are Home Assistant service calls, so use entity IDs and services rather than device IDs.
+Detail panels can show quick action buttons in two ways. For normal entity controls, place the entity under `detail_entities`:
+
+```yaml
+detail_entities:
+  ev:
+    lock: lock.ev
+    boost:
+      label: Boost
+      entity: switch.ev_boost
+      icon: mdi:flash
+```
+
+For custom service calls, use `actions`. Actions are Home Assistant service calls, so use entity IDs and services rather than device IDs.
 
 ```yaml
 actions:

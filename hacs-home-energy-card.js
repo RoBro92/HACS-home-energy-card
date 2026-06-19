@@ -386,15 +386,121 @@ function normaliseAction(action) {
     serviceName,
     target: action.target || {},
     data: action.data || action.service_data || action.serviceData || {},
+    entityId: action.entity || action.entity_id || action.entityId || action.target?.entity_id,
+    stateLabel: action.state_label || action.stateLabel,
+    tone: action.tone || "neutral",
   };
 }
 
-function buildActions(config) {
+const DETAIL_CONTROL_DOMAINS = new Set(["button", "input_button", "lock", "switch"]);
+
+function entityDomain(entityId) {
+  return String(entityId || "").split(".")[0];
+}
+
+function entityName(hass, entityId, fallback) {
+  return stateAttributes(hass, entityId).friendly_name || fallback || labelFromDetailKey(String(entityId || "").split(".").pop());
+}
+
+function normaliseDetailEntry(key, value) {
+  if (typeof value === "string") return { key, entity: value };
+  if (!value || typeof value !== "object") return null;
+  return {
+    ...value,
+    key: value.key || key,
+    entity: value.entity || value.entity_id || value.entityId,
+  };
+}
+
+function detailEntityEntries(config, group) {
+  const detailEntities = config.detail_entities || config.detailEntities || {};
+  const entries = detailEntities[group] || {};
+  if (Array.isArray(entries)) {
+    return entries
+      .map((entry, index) =>
+        normaliseDetailEntry(entry?.key || entry?.name || entry?.label || `item_${index + 1}`, entry),
+      )
+      .filter(Boolean);
+  }
+  return Object.entries(entries).map(([key, value]) => normaliseDetailEntry(key, value)).filter(Boolean);
+}
+
+function isControlDetailEntry(entry) {
+  if (entry?.service) return true;
+  const domain = entityDomain(entry?.entity);
+  return DETAIL_CONTROL_DOMAINS.has(domain) && entry?.display !== "row";
+}
+
+function detailControlAction(entry, hass) {
+  if (entry?.service) return normaliseAction(entry);
+  const entityId = entry?.entity;
+  const domain = entityDomain(entityId);
+  const state = String(stateValue(hass, entityId)).toLowerCase();
+  const target = { entity_id: entityId };
+  const baseLabel = entry?.label || entityName(hass, entityId, labelFromDetailKey(entry?.key));
+
+  if (domain === "lock") {
+    const locked = state === "locked";
+    return {
+      label: entry?.label || (locked ? "Unlock" : "Lock"),
+      icon: entry?.icon || (locked ? "mdi:lock" : "mdi:lock-open-variant"),
+      service: locked ? "lock.unlock" : "lock.lock",
+      domain: "lock",
+      serviceName: locked ? "unlock" : "lock",
+      target,
+      data: {},
+      entityId,
+      stateLabel: titleCaseLabel(state || "unknown"),
+      tone: locked ? "secure" : "alert",
+    };
+  }
+
+  if (domain === "switch") {
+    return {
+      label: baseLabel,
+      icon: entry?.icon || (state === "on" ? "mdi:toggle-switch" : "mdi:toggle-switch-off-outline"),
+      service: "switch.toggle",
+      domain: "switch",
+      serviceName: "toggle",
+      target,
+      data: {},
+      entityId,
+      stateLabel: titleCaseLabel(state || "unknown"),
+      tone: state === "on" ? "on" : "off",
+    };
+  }
+
+  if (domain === "button" || domain === "input_button") {
+    return {
+      label: baseLabel,
+      icon: entry?.icon || "mdi:gesture-tap-button",
+      service: `${domain}.press`,
+      domain,
+      serviceName: "press",
+      target,
+      data: {},
+      entityId,
+      stateLabel: entry?.state_label || entry?.stateLabel,
+      tone: "neutral",
+    };
+  }
+
+  return null;
+}
+
+function configuredDetailActions(config, hass, group) {
+  return detailEntityEntries(config, group).filter(isControlDetailEntry).map((entry) => detailControlAction(entry, hass)).filter(Boolean);
+}
+
+function buildActions(config, hass) {
   const actions = config.actions || config.quick_actions || config.quickActions || {};
   return Object.fromEntries(
     ["grid", "solar", "house", "ev", "battery"].map((key) => [
       key,
-      (Array.isArray(actions[key]) ? actions[key] : []).map(normaliseAction).filter(Boolean),
+      [
+        ...configuredDetailActions(config, hass, key),
+        ...(Array.isArray(actions[key]) ? actions[key] : []).map(normaliseAction).filter(Boolean),
+      ],
     ]),
   );
 }
@@ -504,9 +610,11 @@ function labelFromDetailKey(key) {
 }
 
 function configuredDetailRows(config, hass, group) {
-  const detailEntities = config.detail_entities || config.detailEntities || {};
-  return Object.entries(detailEntities[group] || {})
-    .map(([key, entityId]) => detailRow(labelFromDetailKey(key), entityDisplayValue(hass, entityId), entityId))
+  return detailEntityEntries(config, group)
+    .filter((entry) => !isControlDetailEntry(entry))
+    .map((entry) =>
+      detailRow(entry.label || labelFromDetailKey(entry.key), entityDisplayValue(hass, entry.entity), entry.entity),
+    )
     .filter(Boolean);
 }
 
@@ -711,7 +819,7 @@ export function buildEnergyModel(config = {}, hass) {
     size: cardSizeModel(config),
     labels,
     cost: gridCostModel(config, hass, gridWatts),
-    actions: buildActions(config),
+    actions: buildActions(config, hass),
     grid: {
       label: labels.grid,
       cardLabel: labels.gridCard || labels.grid,
@@ -1211,6 +1319,7 @@ class HacsHomeEnergyCard extends LitElement {
       box-shadow: 0 24px 80px rgba(0, 0, 0, .52), inset 0 1px 0 rgba(255, 255, 255, .08);
       backdrop-filter: blur(20px);
       animation: detailRise .18s ease both;
+      color: var(--energy-card-text, #f7fbff);
     }
 
     .detail-head {
@@ -1229,10 +1338,21 @@ class HacsHomeEnergyCard extends LitElement {
     }
 
     .detail-title {
+      display: flex;
+      gap: 8px;
+      align-items: center;
       margin-top: 3px;
+      color: #ffffff;
       font-size: 24px;
       line-height: 1;
       font-weight: 700;
+    }
+
+    .detail-title ha-icon {
+      width: 22px;
+      height: 22px;
+      color: var(--pill-color, var(--energy-card-accent));
+      filter: drop-shadow(0 0 12px color-mix(in srgb, var(--pill-color, #58d5ff), transparent 35%));
     }
 
     .detail-close {
@@ -1243,6 +1363,7 @@ class HacsHomeEnergyCard extends LitElement {
       border: 1px solid rgba(255, 255, 255, .16);
       border-radius: 8px;
       background: rgba(255, 255, 255, .06);
+      color: #ffffff;
       cursor: pointer;
     }
 
@@ -1284,6 +1405,7 @@ class HacsHomeEnergyCard extends LitElement {
     }
 
     .detail-row-value {
+      color: #ffffff;
       font-size: 15px;
       font-weight: 650;
       white-space: nowrap;
@@ -1292,27 +1414,72 @@ class HacsHomeEnergyCard extends LitElement {
     .detail-actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 10px;
       padding-top: 12px;
       border-top: 1px solid rgba(255, 255, 255, .10);
     }
 
     .detail-action {
       display: inline-grid;
-      grid-template-columns: auto 1fr;
-      gap: 7px;
-      align-items: center;
-      min-height: 34px;
-      padding: 7px 10px;
-      border-radius: 8px;
+      justify-items: center;
+      align-content: center;
+      gap: 3px;
+      width: 68px;
+      min-height: 68px;
+      padding: 8px 6px;
+      border-radius: 999px;
       border: 1px solid rgba(255, 255, 255, .16);
       background: rgba(255, 255, 255, .06);
+      color: #ffffff;
       cursor: pointer;
+      text-align: center;
+      --action-color: var(--pill-color, var(--energy-card-accent));
     }
 
     .detail-action:hover {
       border-color: rgba(255, 255, 255, .34);
       background: rgba(255, 255, 255, .10);
+    }
+
+    .detail-action ha-icon {
+      width: 22px;
+      height: 22px;
+      color: var(--action-color);
+      filter: drop-shadow(0 0 12px color-mix(in srgb, var(--action-color), transparent 35%));
+    }
+
+    .detail-action-label {
+      max-width: 56px;
+      overflow: hidden;
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 650;
+      line-height: 1.12;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .detail-action-state {
+      max-width: 56px;
+      overflow: hidden;
+      color: var(--energy-card-muted);
+      font-size: 9px;
+      line-height: 1.1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .detail-action.tone-secure,
+    .detail-action.tone-on {
+      --action-color: #56f0a8;
+    }
+
+    .detail-action.tone-alert {
+      --action-color: #ff6b6b;
+    }
+
+    .detail-action.tone-off {
+      --action-color: #ffb86b;
     }
 
     @keyframes detailFade {
@@ -1463,6 +1630,31 @@ class HacsHomeEnergyCard extends LitElement {
 
       .node-status {
         display: none;
+      }
+
+      .node-solar {
+        top: 29%;
+        left: 53%;
+      }
+
+      .node-grid {
+        top: 42%;
+        left: 4%;
+      }
+
+      .node-house {
+        top: 47%;
+        left: 40%;
+      }
+
+      .node-ev {
+        right: 4%;
+        bottom: 36%;
+      }
+
+      .node-battery {
+        top: 62%;
+        left: 5%;
       }
 
       .statusbar {
@@ -1835,9 +2027,15 @@ class HacsHomeEnergyCard extends LitElement {
                   <div class="detail-actions">
                     ${actions.map(
                       (action) => html`
-                        <button class="detail-action" type="button" @click=${() => this.callQuickAction(action)}>
+                        <button
+                          class="detail-action tone-${action.tone || "neutral"}"
+                          type="button"
+                          @click=${() => this.callQuickAction(action)}
+                          aria-label=${action.stateLabel ? `${action.label}, ${action.stateLabel}` : action.label}
+                        >
                           <ha-icon icon=${action.icon}></ha-icon>
-                          <span>${action.label}</span>
+                          <span class="detail-action-label">${action.label}</span>
+                          ${action.stateLabel ? html`<span class="detail-action-state">${action.stateLabel}</span>` : html``}
                         </button>
                       `,
                     )}
@@ -1974,8 +2172,13 @@ const EDITOR_FIELD_DEFS = [
   { name: "grid_import_24h", label: "Grid Import 24h", path: ["detail_entities", "grid", "import_24h"], selector: { entity: { domain: "sensor" } } },
   { name: "grid_export_24h", label: "Grid Export 24h", path: ["detail_entities", "grid", "export_24h"], selector: { entity: { domain: "sensor" } } },
   { name: "home_energy_24h", label: "Home Energy 24h", path: ["detail_entities", "house", "energy_24h"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_range", label: "EV Range", path: ["detail_entities", "ev", "range"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_inside_temperature", label: "EV Inside Temperature", path: ["detail_entities", "ev", "inside_temperature"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_odometer", label: "EV Odometer", path: ["detail_entities", "ev", "odometer"], selector: { entity: { domain: "sensor" } } },
   { name: "ev_energy_24h", label: "EV Energy 24h", path: ["detail_entities", "ev", "energy_24h"], selector: { entity: { domain: "sensor" } } },
   { name: "ev_energy_week", label: "EV Energy Week", path: ["detail_entities", "ev", "energy_week"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_lock", label: "EV Lock Control", path: ["detail_entities", "ev", "lock"], selector: { entity: { domain: "lock" } } },
+  { name: "ev_boost", label: "EV Boost Switch", path: ["detail_entities", "ev", "boost", "entity"], selector: { entity: { domain: "switch" } } },
   { name: "battery_voltage", label: "Battery Voltage", path: ["detail_entities", "battery", "voltage"], selector: { entity: { domain: "sensor" } } },
   { name: "battery_current", label: "Battery Current", path: ["detail_entities", "battery", "current"], selector: { entity: { domain: "sensor" } } },
   { name: "battery_charge_24h", label: "Battery Charge 24h", path: ["detail_entities", "battery", "charge_24h"], selector: { entity: { domain: "sensor" } } },
