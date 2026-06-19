@@ -62,6 +62,7 @@ test("card picker metadata enables a visual community card entry", () => {
   const source = read("hacs-home-energy-card.js");
 
   assert.match(source, /window\.customCards\.push/);
+  assert.match(source, /findIndex\(\(card\) => card\?\.type === cardPickerEntry\.type\)/);
   assert.match(source, /preview:\s*true/);
   assert.match(source, /documentationURL:/);
   assert.match(source, /HACS Home Energy Card/);

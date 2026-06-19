@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import {
   buildEnergyModel,
   HacsHomeEnergyCard,
+  editorDataFromConfig,
+  editorDataToConfig,
   entityEnabled,
   flowSpeedSeconds,
   formatEnergy,
@@ -401,6 +403,41 @@ test("getStubConfig renders a full daytime community card preview", () => {
   assert.equal(stub.time_of_day, "day");
   assert.equal(stub.entities.grid_power, "sensor.grid_power_w");
   assert.equal(stub.entities.house_power, "sensor.house_power_w");
+});
+
+test("editor mapping exposes native selector data and preserves unrelated config on partial edits", () => {
+  const config = {
+    title: "Energy Flow",
+    show_ev: true,
+    show_solar: true,
+    show_battery: true,
+    time_of_day: "day",
+    entities: {
+      grid_power: "sensor.grid_power_w",
+      house_power: "sensor.house_power_w",
+      solar_power: "sensor.solar_power_w",
+    },
+    detail_entities: {
+      solar: {
+        pv_voltage: "sensor.solar_pv_voltage",
+      },
+    },
+  };
+
+  const data = editorDataFromConfig(config);
+
+  assert.equal(data.grid_power, "sensor.grid_power_w");
+  assert.equal(data.house_power, "sensor.house_power_w");
+  assert.equal(data.show_ev, true);
+
+  const next = editorDataToConfig(config, { ...data, show_ev: false, show_solar: false, show_battery: false, time_of_day: "auto" });
+
+  assert.equal(next.show_ev, false);
+  assert.equal(next.show_solar, false);
+  assert.equal(next.show_battery, false);
+  assert.equal(next.time_of_day, undefined);
+  assert.equal(next.entities.grid_power, "sensor.grid_power_w");
+  assert.equal(next.detail_entities.solar.pv_voltage, "sensor.solar_pv_voltage");
 });
 
 test("selectBackground prefers setup and time-specific background variants", () => {

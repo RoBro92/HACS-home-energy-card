@@ -28,7 +28,7 @@ In a Home Assistant dashboard:
 
 1. Edit the dashboard.
 2. Add a manual card or search for HACS Home Energy Card.
-3. Enter your entity IDs in the card editor fields.
+3. Select your entity IDs from the card editor dropdowns.
 4. Use the setup fields to enable or disable EV, solar, and battery sections.
 
 The `show_ev`, `show_solar`, and `show_battery` fields accept either `true`/`false` or a helper entity such as `input_boolean.has_ev`. Helper entities are useful when you want one dashboard card to adapt to different homes.

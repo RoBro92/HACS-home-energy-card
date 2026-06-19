@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.6
+
+- Replaces the blank custom editor fields with native Home Assistant form selectors and entity dropdowns.
+- Prevents duplicate card picker entries when Home Assistant loads the module more than once.
+- Improves small preview layouts in the card picker and editor modal.
+- Lightens the day overlay so the base no EV, no solar, and no battery setup does not appear black.
+
 ## 1.0.5
 
 - Renames the packaged `dist` module to `HACS-home-energy-card.js` so HACS can find a plugin file matching the repository name exactly.

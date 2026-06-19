@@ -886,6 +886,11 @@ class HacsHomeEnergyCard extends LitElement {
     }
 
     .mode-day .scene {
+      background-image:
+        linear-gradient(90deg, rgba(0, 0, 0, .30), rgba(0, 0, 0, .06) 48%, rgba(0, 0, 0, .24)),
+        linear-gradient(180deg, rgba(0, 0, 0, .12), rgba(0, 0, 0, .02) 42%, rgba(0, 0, 0, .42)),
+        var(--energy-background),
+        var(--energy-background-fallback, none);
       filter: saturate(1.02) contrast(1.02);
     }
 
@@ -1432,6 +1437,137 @@ class HacsHomeEnergyCard extends LitElement {
         left: 60%;
       }
     }
+
+    @container (max-width: 620px) {
+      .content {
+        --energy-card-padding: 14px;
+      }
+
+      .topbar,
+      .summary {
+        display: none;
+      }
+
+      .node {
+        min-width: 74px;
+        padding: 5px 7px;
+      }
+
+      .node-label {
+        font-size: 8px;
+      }
+
+      .node-value {
+        font-size: 15px;
+      }
+
+      .node-status {
+        display: none;
+      }
+
+      .statusbar {
+        grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+        gap: 4px;
+      }
+
+      .pill {
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 5px;
+        padding: 5px 6px;
+      }
+
+      .pill ha-icon {
+        width: 15px;
+        height: 15px;
+      }
+
+      .pill-label {
+        display: none;
+      }
+
+      .pill-main {
+        display: grid;
+        gap: 0;
+      }
+
+      .pill-status {
+        font-size: 10px;
+      }
+
+      .pill-value {
+        font-size: 10px;
+      }
+    }
+
+    @container (max-width: 380px) {
+      .content {
+        --energy-card-padding: 9px;
+      }
+
+      .flows {
+        opacity: .55;
+      }
+
+      .node {
+        min-width: 58px;
+        padding: 4px 5px;
+      }
+
+      .node-label {
+        font-size: 7px;
+      }
+
+      .node-value {
+        font-size: 12px;
+      }
+
+      .node-solar {
+        top: 30%;
+        left: 52%;
+      }
+
+      .node-grid {
+        top: 40%;
+        left: 3%;
+      }
+
+      .node-house {
+        top: 46%;
+        left: 39%;
+      }
+
+      .node-ev {
+        right: 3%;
+        bottom: 34%;
+      }
+
+      .node-battery {
+        top: 62%;
+        left: 58%;
+      }
+
+      .statusbar {
+        grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+        gap: 3px;
+      }
+
+      .pill {
+        display: block;
+        padding: 4px;
+      }
+
+      .pill ha-icon,
+      .pill-status {
+        display: none;
+      }
+
+      .pill-value {
+        display: block;
+        overflow: hidden;
+        text-align: center;
+        text-overflow: ellipsis;
+      }
+    }
   `;
 
   static getConfigElement() {
@@ -1756,68 +1892,161 @@ class HacsHomeEnergyCard extends LitElement {
   }
 }
 
-const EDITOR_FIELDS = [
-  ["Title", ["title"], "Energy Flow"],
-  ["Subtitle", ["subtitle"], "Live home power"],
-  ["Show EV", ["show_ev"], "true, false, or input_boolean.has_ev"],
-  ["Show Solar", ["show_solar"], "true, false, or input_boolean.has_solar"],
-  ["Show Battery", ["show_battery"], "true, false, or input_boolean.has_battery"],
-  ["Solar Capacity (kW)", ["solar_capacity_kw"], "5"],
-  ["Battery Capacity (kWh)", ["battery_capacity_kwh"], "13.5"],
-  ["Show Title", ["show_title"], "false"],
-  ["Show Daily Summary", ["show_daily_summary"], "false"],
-  ["Show Bottom Bar", ["show_bottom_bar"], "true"],
-  ["Node Detail", ["node_detail"], "minimal or full"],
-  ["Card Width (px)", ["card_width"], "900"],
-  ["Card Height (px)", ["card_height"], "506"],
-  ["Minimum Width (px)", ["min_width"], "320"],
-  ["Minimum Height (px)", ["min_height"], "180"],
-  ["Grid Label", ["labels", "grid"], "Grid"],
-  ["Grid Bottom Label", ["labels", "gridCard"], "Electricity"],
-  ["Home Label", ["labels", "house"], "Home"],
-  ["Solar Label", ["labels", "solar"], "Solar"],
-  ["EV Label", ["labels", "ev"], "EV"],
-  ["EV Bottom Label", ["labels", "evCard"], "Electric Vehicle"],
-  ["Battery Label", ["labels", "battery"], "Battery"],
-  ["Import Rate", ["tariffs", "import_rate"], "0.34"],
-  ["Export Rate", ["tariffs", "export_rate"], "0.15"],
-  ["Import Rate Entity", ["tariffs", "import_rate_entity"], "sensor.current_import_rate"],
-  ["Export Rate Entity", ["tariffs", "export_rate_entity"], "sensor.current_export_rate"],
-  ["Currency", ["tariffs", "currency"], "£"],
-  ["Sun / Day-Night Entity", ["entities", "sun"], "sun.sun"],
-  ["Grid Import/Export Power", ["entities", "grid_power"], "sensor.grid_power_w"],
-  ["Home Power Usage", ["entities", "house_power"], "sensor.house_consumption_w"],
-  ["Solar Producing Power", ["entities", "solar_power"], "sensor.solar_power_w"],
-  ["Solar Capacity Entity", ["entities", "solar_capacity"], "sensor.solar_capacity_kw"],
-  ["Battery Charge/Discharge Power", ["entities", "battery_power"], "sensor.battery_power_w"],
-  ["Battery State of Charge", ["entities", "battery_soc"], "sensor.battery_soc"],
-  ["Battery Capacity Entity", ["entities", "battery_capacity"], "sensor.battery_capacity_kwh"],
-  ["EV Charge Power", ["entities", "ev_power"], "sensor.ev_charging_power_w"],
-  ["EV State of Charge", ["entities", "ev_soc"], "sensor.ev_state_of_charge"],
-  ["EV Charging State", ["entities", "ev_charging_state"], "binary_sensor.ev_charging"],
-  ["Grid Energy Today", ["energy_today", "grid"], "sensor.grid_energy_today"],
-  ["Solar Energy Today", ["energy_today", "solar"], "sensor.solar_energy_today"],
-  ["Home Energy Today", ["energy_today", "home"], "sensor.home_energy_today"],
-  ["Grid Node Extra", ["node_info", "grid", "entity"], "sensor.grid_voltage"],
-  ["Home Node Extra", ["node_info", "house", "entity"], "sensor.home_temperature"],
-  ["Solar Node Extra", ["node_info", "solar", "entity"], "sensor.solar_efficiency"],
-  ["EV Node Extra", ["node_info", "ev", "entity"], "sensor.ev_range"],
-  ["Battery Node Extra", ["node_info", "battery", "entity"], "sensor.battery_temperature"],
-  ["Solar PV Voltage", ["detail_entities", "solar", "pv_voltage"], "sensor.solar_pv_voltage"],
-  ["Solar PV Current", ["detail_entities", "solar", "pv_current"], "sensor.solar_pv_current"],
-  ["Solar Energy 24h", ["detail_entities", "solar", "energy_24h"], "sensor.solar_energy_24h"],
-  ["Solar Energy Week", ["detail_entities", "solar", "energy_week"], "sensor.solar_energy_week"],
-  ["Solar Energy Month", ["detail_entities", "solar", "energy_month"], "sensor.solar_energy_month"],
-  ["Grid Import 24h", ["detail_entities", "grid", "import_24h"], "sensor.grid_import_24h"],
-  ["Grid Export 24h", ["detail_entities", "grid", "export_24h"], "sensor.grid_export_24h"],
-  ["Home Energy 24h", ["detail_entities", "house", "energy_24h"], "sensor.home_energy_24h"],
-  ["EV Energy 24h", ["detail_entities", "ev", "energy_24h"], "sensor.ev_energy_24h"],
-  ["EV Energy Week", ["detail_entities", "ev", "energy_week"], "sensor.ev_energy_week"],
-  ["Battery Voltage", ["detail_entities", "battery", "voltage"], "sensor.battery_voltage"],
-  ["Battery Current", ["detail_entities", "battery", "current"], "sensor.battery_current"],
-  ["Battery Charge 24h", ["detail_entities", "battery", "charge_24h"], "sensor.battery_charge_24h"],
-  ["Battery Discharge 24h", ["detail_entities", "battery", "discharge_24h"], "sensor.battery_discharge_24h"],
+const EDITOR_FIELD_DEFS = [
+  { name: "title", label: "Title", path: ["title"], selector: { text: {} } },
+  { name: "subtitle", label: "Subtitle", path: ["subtitle"], selector: { text: {} } },
+  { name: "show_ev", label: "Show EV", path: ["show_ev"], selector: { boolean: {} }, default: true },
+  { name: "show_solar", label: "Show Solar", path: ["show_solar"], selector: { boolean: {} }, default: true },
+  { name: "show_battery", label: "Show Battery", path: ["show_battery"], selector: { boolean: {} }, default: true },
+  { name: "show_title", label: "Show Title", path: ["show_title"], selector: { boolean: {} }, default: false },
+  { name: "show_daily_summary", label: "Show Daily Summary", path: ["show_daily_summary"], selector: { boolean: {} }, default: false },
+  { name: "show_bottom_bar", label: "Show Bottom Bar", path: ["show_bottom_bar"], selector: { boolean: {} }, default: true },
+  {
+    name: "node_detail",
+    label: "Node Detail",
+    path: ["node_detail"],
+    selector: {
+      select: {
+        mode: "dropdown",
+        options: [
+          { value: "minimal", label: "Minimal" },
+          { value: "full", label: "Full" },
+        ],
+      },
+    },
+    default: "minimal",
+  },
+  {
+    name: "time_of_day",
+    label: "Preview Time Of Day",
+    path: ["time_of_day"],
+    selector: {
+      select: {
+        mode: "dropdown",
+        options: [
+          { value: "auto", label: "Use sun entity" },
+          { value: "day", label: "Day" },
+          { value: "night", label: "Night" },
+        ],
+      },
+    },
+    default: "auto",
+    deleteWhen: "auto",
+  },
+  { name: "solar_capacity_kw", label: "Solar Capacity kW", path: ["solar_capacity_kw"], selector: { number: { min: 0, step: 0.1, mode: "box" } } },
+  { name: "battery_capacity_kwh", label: "Battery Capacity kWh", path: ["battery_capacity_kwh"], selector: { number: { min: 0, step: 0.1, mode: "box" } } },
+  { name: "card_width", label: "Card Width px", path: ["card_width"], selector: { number: { min: 320, step: 1, mode: "box" } } },
+  { name: "card_height", label: "Card Height px", path: ["card_height"], selector: { number: { min: 180, step: 1, mode: "box" } } },
+  { name: "grid_label", label: "Grid Label", path: ["labels", "grid"], selector: { text: {} } },
+  { name: "house_label", label: "Home Label", path: ["labels", "house"], selector: { text: {} } },
+  { name: "solar_label", label: "Solar Label", path: ["labels", "solar"], selector: { text: {} } },
+  { name: "ev_label", label: "EV Label", path: ["labels", "ev"], selector: { text: {} } },
+  { name: "battery_label", label: "Battery Label", path: ["labels", "battery"], selector: { text: {} } },
+  { name: "sun", label: "Sun Entity", path: ["entities", "sun"], selector: { entity: { domain: "sun" } } },
+  { name: "grid_power", label: "Grid Import Export Power", path: ["entities", "grid_power"], selector: { entity: { domain: "sensor" } } },
+  { name: "house_power", label: "Home Power Usage", path: ["entities", "house_power"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_power", label: "Solar Producing Power", path: ["entities", "solar_power"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_capacity", label: "Solar Capacity Entity", path: ["entities", "solar_capacity"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_power", label: "Battery Charge Discharge Power", path: ["entities", "battery_power"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_soc", label: "Battery State Of Charge", path: ["entities", "battery_soc"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_capacity", label: "Battery Capacity Entity", path: ["entities", "battery_capacity"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_power", label: "EV Charge Power", path: ["entities", "ev_power"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_soc", label: "EV State Of Charge", path: ["entities", "ev_soc"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_charging_state", label: "EV Charging State", path: ["entities", "ev_charging_state"], selector: { entity: { domain: ["binary_sensor", "sensor"] } } },
+  { name: "grid_energy_today", label: "Grid Energy Today", path: ["energy_today", "grid"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_energy_today", label: "Solar Energy Today", path: ["energy_today", "solar"], selector: { entity: { domain: "sensor" } } },
+  { name: "home_energy_today", label: "Home Energy Today", path: ["energy_today", "home"], selector: { entity: { domain: "sensor" } } },
+  { name: "grid_node_extra", label: "Grid Node Extra", path: ["node_info", "grid", "entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "home_node_extra", label: "Home Node Extra", path: ["node_info", "house", "entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_node_extra", label: "Solar Node Extra", path: ["node_info", "solar", "entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_node_extra", label: "EV Node Extra", path: ["node_info", "ev", "entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_node_extra", label: "Battery Node Extra", path: ["node_info", "battery", "entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "import_rate", label: "Import Rate", path: ["tariffs", "import_rate"], selector: { number: { min: 0, step: 0.001, mode: "box" } } },
+  { name: "export_rate", label: "Export Rate", path: ["tariffs", "export_rate"], selector: { number: { min: 0, step: 0.001, mode: "box" } } },
+  { name: "import_rate_entity", label: "Import Rate Entity", path: ["tariffs", "import_rate_entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "export_rate_entity", label: "Export Rate Entity", path: ["tariffs", "export_rate_entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "currency", label: "Currency", path: ["tariffs", "currency"], selector: { text: {} } },
+  { name: "solar_pv_voltage", label: "Solar PV Voltage", path: ["detail_entities", "solar", "pv_voltage"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_pv_current", label: "Solar PV Current", path: ["detail_entities", "solar", "pv_current"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_energy_24h", label: "Solar Energy 24h", path: ["detail_entities", "solar", "energy_24h"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_energy_week", label: "Solar Energy Week", path: ["detail_entities", "solar", "energy_week"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_energy_month", label: "Solar Energy Month", path: ["detail_entities", "solar", "energy_month"], selector: { entity: { domain: "sensor" } } },
+  { name: "grid_import_24h", label: "Grid Import 24h", path: ["detail_entities", "grid", "import_24h"], selector: { entity: { domain: "sensor" } } },
+  { name: "grid_export_24h", label: "Grid Export 24h", path: ["detail_entities", "grid", "export_24h"], selector: { entity: { domain: "sensor" } } },
+  { name: "home_energy_24h", label: "Home Energy 24h", path: ["detail_entities", "house", "energy_24h"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_energy_24h", label: "EV Energy 24h", path: ["detail_entities", "ev", "energy_24h"], selector: { entity: { domain: "sensor" } } },
+  { name: "ev_energy_week", label: "EV Energy Week", path: ["detail_entities", "ev", "energy_week"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_voltage", label: "Battery Voltage", path: ["detail_entities", "battery", "voltage"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_current", label: "Battery Current", path: ["detail_entities", "battery", "current"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_charge_24h", label: "Battery Charge 24h", path: ["detail_entities", "battery", "charge_24h"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_discharge_24h", label: "Battery Discharge 24h", path: ["detail_entities", "battery", "discharge_24h"], selector: { entity: { domain: "sensor" } } },
 ];
+
+const EDITOR_SECTIONS = [
+  ["Card", 0, 20],
+  ["Sensors", 20, 33],
+  ["Floating Node Extras", 33, 38],
+  ["Cost", 38, 43],
+  ["Detail Sensors", 43],
+];
+
+function cloneConfigForEditor(config) {
+  return JSON.parse(JSON.stringify(config || {}));
+}
+
+function readConfigPath(config, path) {
+  let value = config || {};
+  for (const key of path) value = value?.[key];
+  return value;
+}
+
+function writeConfigPath(config, path, value) {
+  let target = config;
+  for (const key of path.slice(0, -1)) {
+    target[key] = { ...(target[key] || {}) };
+    target = target[key];
+  }
+  target[path[path.length - 1]] = value;
+}
+
+function deleteConfigPath(config, path) {
+  const stack = [];
+  let target = config;
+  for (const key of path.slice(0, -1)) {
+    if (!target?.[key]) return;
+    stack.push([target, key]);
+    target = target[key];
+  }
+  delete target[path[path.length - 1]];
+  for (let index = stack.length - 1; index >= 0; index -= 1) {
+    const [parent, key] = stack[index];
+    if (parent[key] && typeof parent[key] === "object" && !Object.keys(parent[key]).length) delete parent[key];
+  }
+}
+
+function editorDataFromConfig(config) {
+  const data = {};
+  for (const field of EDITOR_FIELD_DEFS) {
+    const value = readConfigPath(config, field.path);
+    if (value !== undefined && value !== null) data[field.name] = value;
+    else if (field.default !== undefined) data[field.name] = field.default;
+  }
+  return data;
+}
+
+function editorDataToConfig(previousConfig, data) {
+  const config = cloneConfigForEditor(previousConfig);
+  for (const field of EDITOR_FIELD_DEFS) {
+    const value = data[field.name];
+    const empty = value === "" || value === undefined || value === null || value === field.deleteWhen;
+    if (empty) {
+      deleteConfigPath(config, field.path);
+      continue;
+    }
+    writeConfigPath(config, field.path, value);
+  }
+  return config;
+}
 
 class HacsHomeEnergyCardEditor extends LitElement {
   static properties = {
@@ -1828,17 +2057,11 @@ class HacsHomeEnergyCardEditor extends LitElement {
   static styles = css`
     .editor {
       display: grid;
-      gap: 14px;
-    }
-
-    .field-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
+      gap: 18px;
     }
 
     .section-title {
-      margin-top: 6px;
+      margin: 4px 0 8px;
       color: var(--secondary-text-color);
       font-size: 12px;
       font-weight: 600;
@@ -1846,7 +2069,7 @@ class HacsHomeEnergyCardEditor extends LitElement {
       text-transform: uppercase;
     }
 
-    ha-textfield {
+    ha-form {
       width: 100%;
     }
   `;
@@ -1858,58 +2081,34 @@ class HacsHomeEnergyCardEditor extends LitElement {
   render() {
     return html`
       <div class="editor">
-        <div class="section-title">Card</div>
-        <div class="field-grid">
-          ${EDITOR_FIELDS.slice(0, 27).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
-        </div>
-        <div class="section-title">Sensors</div>
-        <div class="field-grid">
-          ${EDITOR_FIELDS.slice(27, 46).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
-        </div>
-        <div class="section-title">Detail Sensors</div>
-        <div class="field-grid">
-          ${EDITOR_FIELDS.slice(46).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
-        </div>
+        ${EDITOR_SECTIONS.map(([label, start, end]) => this.renderSection(label, start, end))}
       </div>
     `;
   }
 
-  renderField(label, path, placeholder) {
+  renderSection(label, start, end) {
+    const fields = EDITOR_FIELD_DEFS.slice(start, end);
     return html`
-      <ha-textfield
-        label=${label}
-        .value=${this.readPath(path)}
-        placeholder=${placeholder}
-        @input=${(event) => this.updatePath(path, event.target.value)}
-      ></ha-textfield>
+      <section>
+        <div class="section-title">${label}</div>
+        <ha-form
+          .hass=${this.hass}
+          .data=${editorDataFromConfig(this._config)}
+          .schema=${fields.map(({ name, selector }) => ({ name, selector }))}
+          .computeLabel=${this.computeLabel}
+          @value-changed=${this.valueChanged}
+        ></ha-form>
+      </section>
     `;
   }
 
-  readPath(path) {
-    let value = this._config || {};
-    for (const key of path) {
-      value = value?.[key];
-    }
-    return value ?? "";
+  computeLabel(schema) {
+    return EDITOR_FIELD_DEFS.find((field) => field.name === schema.name)?.label || schema.name;
   }
 
-  updatePath(path, value) {
-    const config = {
-      ...(this._config || {}),
-      entities: { ...(this._config?.entities || {}) },
-      energy_today: { ...(this._config?.energy_today || this._config?.energyToday || {}) },
-    };
-    let target = config;
-    for (const key of path.slice(0, -1)) {
-      target[key] = { ...(target[key] || {}) };
-      target = target[key];
-    }
-
-    const key = path[path.length - 1];
-    const trimmed = String(value ?? "").trim();
-    if (trimmed) target[key] = trimmed;
-    else delete target[key];
-
+  valueChanged(event) {
+    const data = { ...editorDataFromConfig(this._config), ...(event.detail.value || {}) };
+    const config = editorDataToConfig(this._config, data);
     this._config = config;
     fireEvent(this, "config-changed", { config });
   }
@@ -1925,13 +2124,19 @@ if (typeof customElements !== "undefined" && !customElements.get("hacs-home-ener
 
 if (typeof window !== "undefined") {
   window.customCards = window.customCards || [];
-  window.customCards.push({
+  const cardPickerEntry = {
     type: "hacs-home-energy-card",
     name: "HACS Home Energy Card",
     description: "Cinematic home energy dashboard with solar, grid, EV, and battery flows.",
     preview: true,
     documentationURL: "https://github.com/RoBro92/HACS-home-energy-card/blob/main/docs/setup.md",
-  });
+  };
+  const existingEntryIndex = window.customCards.findIndex((card) => card?.type === cardPickerEntry.type);
+  if (existingEntryIndex === -1) {
+    window.customCards.push(cardPickerEntry);
+  } else {
+    window.customCards[existingEntryIndex] = { ...window.customCards[existingEntryIndex], ...cardPickerEntry };
+  }
 }
 
-export { HacsHomeEnergyCard };
+export { HacsHomeEnergyCard, editorDataFromConfig, editorDataToConfig };

@@ -1,6 +1,6 @@
 {
   "name": "hacs-home-energy-card",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A cinematic Home Assistant Lovelace energy flow card.",
   "type": "module",
   "scripts": {
