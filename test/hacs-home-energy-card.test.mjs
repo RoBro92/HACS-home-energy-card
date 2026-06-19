@@ -315,6 +315,25 @@ test("buildEnergyModel exposes optional visual layers from config", () => {
   assert.equal(model.size.minHeight, "270px");
 });
 
+test("buildEnergyModel exposes a dist background fallback for HACS source installs", () => {
+  const model = buildEnergyModel(
+    {
+      show_ev: false,
+      show_solar: false,
+      show_battery: false,
+      time_of_day: "night",
+      entities: {
+        grid_power: "sensor.grid_power_w",
+        house_power: "sensor.house_power_w",
+      },
+    },
+    hass,
+  );
+
+  assert.match(model.background, /energy-bg-base-night\.png$/);
+  assert.match(model.backgroundFallback, /dist\/energy-bg-base-night\.png$/);
+});
+
 test("buildEnergyModel clamps configured card dimensions to usable minimums", () => {
   const model = buildEnergyModel(
     {

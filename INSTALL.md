@@ -15,7 +15,7 @@
 4. Confirm the Lovelace resource exists:
 
    ```yaml
-   url: /hacsfiles/HACS-home-energy-card/hacs-home-energy-card.js
+   url: /hacsfiles/HACS-home-energy-card/dist/hacs-home-energy-card.js
    type: module
    ```
 
@@ -50,7 +50,7 @@
 
 The bundled images load automatically from the same folder as `hacs-home-energy-card.js`.
 
-- HACS path: `/hacsfiles/HACS-home-energy-card/energy-bg-*.png`
+- HACS path: `/hacsfiles/HACS-home-energy-card/dist/energy-bg-*.png`
 - Manual path: `/local/hacs-home-energy-card/energy-bg-*.png`
 
 Use `backgrounds` only if you want to override the bundled images.

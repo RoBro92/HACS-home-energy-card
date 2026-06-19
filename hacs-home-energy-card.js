@@ -14,38 +14,47 @@ function moduleAsset(path) {
   return new URL(path, MODULE_BASE_URL).href;
 }
 
+function bundledAsset(path) {
+  const basePath = MODULE_BASE_URL.pathname || "";
+  const alreadyInDist = basePath.endsWith("/dist/");
+  return {
+    default: moduleAsset(path),
+    fallback: alreadyInDist ? null : moduleAsset(`dist/${path}`),
+  };
+}
+
 const DEFAULT_BACKGROUNDS = {
   full: {
-    day: moduleAsset("energy-bg-full-day.png"),
-    night: moduleAsset("energy-bg-full-night.png"),
+    day: bundledAsset("energy-bg-full-day.png"),
+    night: bundledAsset("energy-bg-full-night.png"),
   },
   ev_solar: {
-    day: moduleAsset("energy-bg-ev-solar-day.png"),
-    night: moduleAsset("energy-bg-ev-solar-night.png"),
+    day: bundledAsset("energy-bg-ev-solar-day.png"),
+    night: bundledAsset("energy-bg-ev-solar-night.png"),
   },
   ev_battery: {
-    day: moduleAsset("energy-bg-ev-battery-day.png"),
-    night: moduleAsset("energy-bg-ev-battery-night.png"),
+    day: bundledAsset("energy-bg-ev-battery-day.png"),
+    night: bundledAsset("energy-bg-ev-battery-night.png"),
   },
   solar_battery: {
-    day: moduleAsset("energy-bg-no-ev-day.png"),
-    night: moduleAsset("energy-bg-no-ev-night.png"),
+    day: bundledAsset("energy-bg-no-ev-day.png"),
+    night: bundledAsset("energy-bg-no-ev-night.png"),
   },
   ev_only: {
-    day: moduleAsset("energy-bg-no-solar-battery-day.png"),
-    night: moduleAsset("energy-bg-no-solar-battery-night.png"),
+    day: bundledAsset("energy-bg-no-solar-battery-day.png"),
+    night: bundledAsset("energy-bg-no-solar-battery-night.png"),
   },
   solar_only: {
-    day: moduleAsset("energy-bg-solar-only-day.png"),
-    night: moduleAsset("energy-bg-solar-only-night.png"),
+    day: bundledAsset("energy-bg-solar-only-day.png"),
+    night: bundledAsset("energy-bg-solar-only-night.png"),
   },
   battery_only: {
-    day: moduleAsset("energy-bg-battery-only-day.png"),
-    night: moduleAsset("energy-bg-battery-only-night.png"),
+    day: bundledAsset("energy-bg-battery-only-day.png"),
+    night: bundledAsset("energy-bg-battery-only-night.png"),
   },
   base: {
-    day: moduleAsset("energy-bg-base-day.png"),
-    night: moduleAsset("energy-bg-base-night.png"),
+    day: bundledAsset("energy-bg-base-day.png"),
+    night: bundledAsset("energy-bg-base-night.png"),
   },
 };
 
@@ -596,17 +605,17 @@ export function setupBackgroundKey(visible) {
   return "full";
 }
 
-function readBackgroundValue(entry, mode) {
+function readBackgroundCandidate(entry, mode) {
   if (!entry) return null;
-  if (typeof entry === "string") return entry;
+  if (typeof entry === "string") return { url: entry, fallback: null };
   const modeEntry = entry[mode];
   if (modeEntry && typeof modeEntry === "object") {
-    return modeEntry.default || null;
+    return { url: modeEntry.default || null, fallback: modeEntry.fallback || null };
   }
-  return modeEntry || entry.default || null;
+  return { url: modeEntry || entry.default || null, fallback: entry.fallback || null };
 }
 
-export function selectBackground(config = {}, visible = {}, mode = "night") {
+function selectBackgroundCandidate(config = {}, visible = {}, mode = "night") {
   const backgrounds = config.backgrounds || DEFAULT_BACKGROUNDS;
   const setupKey = setupBackgroundKey(visible);
   const aliases = {
@@ -621,15 +630,19 @@ export function selectBackground(config = {}, visible = {}, mode = "night") {
   };
 
   for (const key of aliases[setupKey] || [setupKey]) {
-    const value = readBackgroundValue(backgrounds[key], mode);
-    if (value) return value;
+    const value = readBackgroundCandidate(backgrounds[key], mode);
+    if (value?.url) return value;
   }
 
-  if (setupKey === "solar_battery" && config.background_no_ev) return config.background_no_ev;
-  if (setupKey === "full" && config.background_full) return config.background_full;
-  if (config.background_full) return config.background_full;
-  if (config.background_no_ev) return config.background_no_ev;
-  return setupKey === "solar_battery" ? DEFAULT_BACKGROUND_NO_EV : DEFAULT_BACKGROUND_FULL;
+  if (setupKey === "solar_battery" && config.background_no_ev) return { url: config.background_no_ev, fallback: null };
+  if (setupKey === "full" && config.background_full) return { url: config.background_full, fallback: null };
+  if (config.background_full) return { url: config.background_full, fallback: null };
+  if (config.background_no_ev) return { url: config.background_no_ev, fallback: null };
+  return { url: setupKey === "solar_battery" ? DEFAULT_BACKGROUND_NO_EV : DEFAULT_BACKGROUND_FULL, fallback: null };
+}
+
+export function selectBackground(config = {}, visible = {}, mode = "night") {
+  return selectBackgroundCandidate(config, visible, mode).url;
 }
 
 function statusFromPower(value, positiveStatus, negativeStatus, idleStatus = "idle") {
@@ -681,11 +694,13 @@ export function buildEnergyModel(config = {}, hass) {
   const batterySocLabel = formatPercent(batterySoc);
   const batteryCapacityLabel = formatBatteryCapacity(batteryCapacity);
   const labels = configLabels(config);
+  const background = selectBackgroundCandidate(config, visible, mode);
 
   const model = {
     title: config.title || "Energy Flow",
     subtitle: config.subtitle || "Live home power",
-    background: selectBackground(config, visible, mode),
+    background: background.url,
+    backgroundFallback: background.fallback,
     mode,
     entities,
     visible,
@@ -863,9 +878,10 @@ class HacsHomeEnergyCard extends LitElement {
       background-image:
         linear-gradient(90deg, rgba(0, 0, 0, .58), rgba(0, 0, 0, .18) 48%, rgba(0, 0, 0, .42)),
         linear-gradient(180deg, rgba(0, 0, 0, .28), rgba(0, 0, 0, .06) 42%, rgba(0, 0, 0, .68)),
-        var(--energy-background);
+        var(--energy-background),
+        var(--energy-background-fallback, none);
       background-position: center;
-      background-size: 100% 100%, 100% 100%, 100% 100%;
+      background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%;
       filter: saturate(1.08) contrast(1.06);
     }
 
@@ -1472,7 +1488,10 @@ class HacsHomeEnergyCard extends LitElement {
     this.applySizing(model.size);
 
     return html`
-      <ha-card class="mode-${model.mode}" style="--energy-background: url('${model.background}')">
+      <ha-card
+        class="mode-${model.mode}"
+        style="--energy-background: url('${model.background}'); --energy-background-fallback: ${model.backgroundFallback ? `url('${model.backgroundFallback}')` : "none"}"
+      >
         <div class="scene"></div>
         <div class="atmosphere"></div>
         <div class="content">

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+- Fixes bundled background loading for HACS installs that serve the card JavaScript from the repository root while images are stored in `dist`.
+- Points the HACS manifest and HACS resource examples at the `dist` card file so bundled images sit next to the running module.
+- Publishes the HACS release as a zip package with the card JavaScript and bundled image files together.
+
 ## 1.0.0
 
 - Simplifies the default card layout by hiding the top daily summary strip and using compact floating live nodes.
