@@ -427,6 +427,7 @@ function predefinedBottomCard(type, model) {
 function customBottomCard(item, config, hass, model) {
   const type = typeof item === "string" ? item : item?.type;
   if (!type) return null;
+  if (["solar", "ev", "battery"].includes(type) && !model.visible[type]) return null;
   if (type === "sun") return { ...sunCardModel(config, hass), ...(typeof item === "object" ? item : {}) };
   if (type === "entity" && typeof item === "object" && item.entity) {
     return {

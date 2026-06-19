@@ -119,6 +119,35 @@ test("buildEnergyModel supports configurable labels, node extras, bottom cards, 
   assert.equal(model.actions.ev[0].serviceName, "turn_on");
 });
 
+test("buildEnergyModel hides configured optional bottom cards when their systems are disabled", () => {
+  const model = buildEnergyModel(
+    {
+      show_ev: false,
+      show_solar: false,
+      show_battery: false,
+      bottom_bar: [
+        { type: "cost", label: "Grid cost" },
+        { type: "sun" },
+        "solar",
+        "ev",
+        "battery",
+        { type: "entity", label: "Voltage", entity: "sensor.grid_voltage", status: "Grid" },
+      ],
+      entities: {
+        sun: "sun.sun",
+        grid_power: "sensor.grid_power_w",
+        house_power: "sensor.house_power_w",
+      },
+    },
+    hass,
+  );
+
+  assert.deepEqual(
+    model.bottomCards.map((card) => card.kind),
+    ["cost", "sun", "entity"],
+  );
+});
+
 test("formatPower keeps watts for small values and switches to kW for larger values", () => {
   assert.equal(formatPower(87), "87 W");
   assert.equal(formatPower(1234.4), "1.2 kW");

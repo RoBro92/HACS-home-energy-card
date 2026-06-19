@@ -2,7 +2,25 @@
 
 `energy-home-visual-card` is a fullscreen-friendly Home Assistant Lovelace custom card for cinematic energy monitoring. It places animated SVG power-flow lines over a high-quality home energy background and renders live values for grid, solar, house load, EV charging, battery state, and daily energy.
 
-![Energy Home Visual Card preview](docs/images/card-preview.png)
+## Preview
+
+### Day and Night Cycle
+
+| Day | Night |
+| --- | --- |
+| ![Energy Home Visual Card day view](docs/images/card-day.png) | ![Energy Home Visual Card night view](docs/images/card-night.png) |
+
+### Setup Variants
+
+| Full setup | No EV | No solar |
+| --- | --- | --- |
+| ![Energy Home Visual Card full setup](docs/images/card-preview.png) | ![Energy Home Visual Card with EV removed](docs/images/card-no-ev.png) | ![Energy Home Visual Card with solar removed](docs/images/card-no-solar.png) |
+
+| No battery | Base home |
+| --- | --- |
+| ![Energy Home Visual Card with battery removed](docs/images/card-no-battery.png) | ![Energy Home Visual Card with EV, solar, and battery removed](docs/images/card-base.png) |
+
+### Detail Panels
 
 ![Solar detail panel](docs/images/card-solar-detail.png)
 
@@ -92,7 +110,13 @@ detail_entities:
 
 The bundled backgrounds load automatically when the card and images are installed together through HACS or from `dist/`. Use `backgrounds` only when you want to override the provided images.
 
-See `docs/setup.md`, `examples/dashboard.yaml`, and `examples/dashboard-no-ev.yaml` for fuller setup snippets.
+## Documentation
+
+The README is intentionally kept as a quick start. Detailed setup stays in versioned repo docs so HACS users, pull requests, and releases all reference the same instructions:
+
+- [Setup guide](docs/setup.md)
+- [Full dashboard example](examples/dashboard.yaml)
+- [No-EV dashboard example](examples/dashboard-no-ev.yaml)
 
 ## Setup Tips
 
@@ -186,14 +210,3 @@ card_mod:
       --energy-card-shadow: none;
     }
 ```
-
-## Release
-
-Run this before tagging a GitHub release for HACS:
-
-```bash
-npm run build
-npm run check
-```
-
-Commit the generated `dist/` folder, push to `RoBro92/HACS-home-energy-card`, then create a version tag such as `v0.1.0`.
