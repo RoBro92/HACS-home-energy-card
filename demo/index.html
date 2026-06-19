@@ -112,7 +112,12 @@
             "mdi:home": "⌂",
             "mdi:weather-sunset": "◐",
             "mdi:information-outline": "i",
-            "mdi:gesture-tap-button": "◎"
+            "mdi:gesture-tap-button": "◎",
+            "mdi:flash": "↯",
+            "mdi:lock": "🔒",
+            "mdi:lock-open-variant": "🔓",
+            "mdi:toggle-switch": "▣",
+            "mdi:toggle-switch-off-outline": "□"
           };
           const glyph = icons[this.getAttribute("icon")] || "•";
           this.shadowRoot || this.attachShadow({ mode: "open" });
@@ -254,10 +259,19 @@
             energy_month: "sensor.home_energy_month"
           },
           ev: {
+            range: "sensor.ev_range",
+            inside_temperature: "sensor.ev_inside_temperature",
+            odometer: "sensor.ev_odometer",
             energy_24h: "sensor.ev_energy_24h",
             energy_week: "sensor.ev_energy_week",
             voltage: "sensor.ev_voltage",
-            current: "sensor.ev_current"
+            current: "sensor.ev_current",
+            lock: "lock.ev",
+            boost: {
+              label: "Boost",
+              entity: "switch.ev_boost",
+              icon: "mdi:flash"
+            }
           },
           battery: {
             voltage: "sensor.battery_voltage",
@@ -265,12 +279,6 @@
             charge_24h: "sensor.battery_charge_24h",
             discharge_24h: "sensor.battery_discharge_24h"
           }
-        },
-        actions: {
-          ev: [
-            { label: "Boost charge", service: "switch.turn_on", target: { entity_id: "switch.ev_boost" } },
-            { label: "Unlock", service: "lock.unlock", target: { entity_id: "lock.ev" } }
-          ]
         }
       });
 
@@ -301,6 +309,10 @@
             "sensor.ev_charging_power_w": sensor(Math.round(ev)),
             "sensor.ev_soc": sensor(64 + Math.round(Math.sin(state.phase / 4) * 3), { unit_of_measurement: "%" }),
             "binary_sensor.ev_charging": sensor(state.showEv && ev > 100 ? "on" : "off"),
+            "sensor.ev_inside_temperature": sensor("21.5", { unit_of_measurement: "°C" }),
+            "sensor.ev_odometer": sensor("12842", { unit_of_measurement: "mi" }),
+            "lock.ev": { state: "locked", attributes: { friendly_name: "EV Lock" } },
+            "switch.ev_boost": { state: "off", attributes: { friendly_name: "EV Boost" } },
             "sensor.battery_power_w": sensor(Math.round(battery)),
             "sensor.battery_soc": sensor(Math.round(batterySoc)),
             "sensor.current_import_rate": sensor("0.34", { unit_of_measurement: "GBP/kWh" }),
