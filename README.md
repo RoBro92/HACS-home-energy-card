@@ -2,6 +2,10 @@
 
 `energy-home-visual-card` is a fullscreen-friendly Home Assistant Lovelace custom card for cinematic energy monitoring. It places animated SVG power-flow lines over a high-quality home energy background and renders live values for grid, solar, house load, EV charging, battery state, and daily energy.
 
+![Energy Home Visual Card preview](docs/images/card-preview.png)
+
+![Solar detail panel](docs/images/card-solar-detail.png)
+
 ## Features
 
 - LitElement custom card registered as `custom:energy-home-visual-card`.
@@ -27,6 +31,7 @@ show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
+show_title: false
 show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
@@ -58,6 +63,13 @@ detail_entities:
 The bundled backgrounds load automatically when the card and images are installed together through HACS or from `dist/`. Use `backgrounds` only when you want to override the provided images.
 
 See `docs/setup.md`, `examples/dashboard.yaml`, and `examples/dashboard-no-ev.yaml` for fuller setup snippets.
+
+## Setup Tips
+
+- Start with only `grid_power` and `house_power`; then add solar, EV, and battery sections one at a time.
+- Use `show_ev`, `show_solar`, and `show_battery` with booleans for a fixed dashboard, or helper entities for reusable dashboards.
+- Keep `show_title: false` and `show_daily_summary: false` for the clean visual layout shown above.
+- Add `detail_entities` only for sensors you actually have; missing detail rows are ignored.
 
 ## HACS Install
 
@@ -95,6 +107,7 @@ HACS installs the JavaScript module and bundled background images from `dist/`.
 | `show_battery` | No | Boolean or entity. Defaults to visible. |
 | `solar_capacity_kw` | No | Solar install capacity in kW. Used to calculate solar efficiency. |
 | `battery_capacity_kwh` | No | Battery capacity in kWh. |
+| `show_title` | No | Shows optional top-left title/subtitle text when true. Defaults to false. |
 | `show_daily_summary` | No | Shows the top daily kWh summary strip when true. Defaults to false. |
 | `show_bottom_bar` | No | Shows the bottom live-status bar when true. Defaults to true. |
 | `node_detail` | No | `minimal` shows compact floating nodes. `full` adds status text to nodes. |

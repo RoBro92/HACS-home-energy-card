@@ -131,7 +131,7 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../energy-home-visual-card.js?v=preview-14");
+      await import("../energy-home-visual-card.js?v=preview-15");
 
       const card = document.querySelector("energy-home-visual-card");
       const evToggle = document.querySelector("#evToggle");
@@ -149,8 +149,6 @@
       };
 
       card.setConfig({
-        title: "Energy Flow",
-        subtitle: "Live home power",
         backgrounds: {
           full: {
             day: "./assets/energy-bg-full-day.png",

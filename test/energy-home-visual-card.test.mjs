@@ -124,6 +124,7 @@ test("buildEnergyModel derives display values, directions, background, and visib
 
   assert.equal(model.showDailySummary, false);
   assert.equal(model.showStatusBar, true);
+  assert.equal(model.showTitle, false);
   assert.equal(model.nodeDetail, "minimal");
   assert.match(model.background, /energy-bg-full-night\.png$/);
   assert.equal(model.visible.ev, true);
@@ -131,15 +132,18 @@ test("buildEnergyModel derives display values, directions, background, and visib
   assert.equal(model.visible.battery, true);
   assert.equal(model.mode, "night");
   assert.equal(model.grid.status, "exporting");
+  assert.equal(model.grid.displayStatus, "Exporting");
   assert.equal(model.grid.powerLabel, "1.2 kW");
   assert.equal(model.solar.powerLabel, "4.6 kW");
   assert.equal(model.solar.efficiencyLabel, "91%");
   assert.equal(model.solar.statusLabel, "producing / 91%");
   assert.equal(model.house.powerLabel, "2.6 kW");
   assert.equal(model.ev.status, "charging");
+  assert.equal(model.ev.displayStatus, "Charging");
   assert.equal(model.ev.socLabel, "62%");
   assert.equal(model.ev.pillValue, "7.2 kW / 62%");
   assert.equal(model.battery.status, "discharging");
+  assert.equal(model.battery.displayStatus, "Discharging");
   assert.equal(model.battery.socLabel, "86%");
   assert.equal(model.battery.capacityLabel, "13.5 kWh");
   assert.equal(model.battery.statusLabel, "discharging / 86% / 13.5 kWh");
@@ -164,6 +168,7 @@ test("buildEnergyModel exposes optional visual layers from config", () => {
     {
       show_daily_summary: true,
       show_bottom_bar: false,
+      show_title: true,
       node_detail: "full",
       entities: {
         grid_power: "sensor.grid_power_w",
@@ -175,6 +180,7 @@ test("buildEnergyModel exposes optional visual layers from config", () => {
 
   assert.equal(model.showDailySummary, true);
   assert.equal(model.showStatusBar, false);
+  assert.equal(model.showTitle, true);
   assert.equal(model.nodeDetail, "full");
 });
 

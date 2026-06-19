@@ -31,6 +31,8 @@ In a Home Assistant dashboard:
 
 The `show_ev`, `show_solar`, and `show_battery` fields accept either `true`/`false` or a helper entity such as `input_boolean.has_ev`. Helper entities are useful when you want one dashboard card to adapt to different homes.
 
+For the quickest setup, configure only `entities.grid_power` and `entities.house_power` first. After the card renders, add `show_solar`, `show_ev`, `show_battery`, and the matching optional sensors one section at a time.
+
 ## Visual Layout Options
 
 The default layout keeps the background clear: floating nodes show compact live values, the bottom bar shows live status, and the top daily summary is hidden.
@@ -39,6 +41,7 @@ Clicking a floating node or bottom-bar item opens an in-card detail panel. The d
 
 | Field | Default | Notes |
 | --- | --- | --- |
+| `show_title` | `false` | Set to `true` if you want optional top-left title/subtitle text. |
 | `show_daily_summary` | `false` | Set to `true` to restore the top daily kWh strip. |
 | `show_bottom_bar` | `true` | Set to `false` for a cleaner image-only card. |
 | `node_detail` | `minimal` | Use `full` if floating nodes should also show status text. |
@@ -161,8 +164,6 @@ Accepted day states are `above_horizon`, `day`, `sunny`, `on`, and `true`. Accep
 
 ```yaml
 type: custom:energy-home-visual-card
-title: Energy Flow
-subtitle: Live home power
 
 show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
@@ -170,6 +171,7 @@ show_battery: input_boolean.has_battery
 
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
+show_title: false
 show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal

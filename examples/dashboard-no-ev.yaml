@@ -1,11 +1,10 @@
 type: custom:energy-home-visual-card
-title: Energy Flow
-subtitle: Live home power
 show_ev: false
 show_solar: true
 show_battery: true
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
+show_title: false
 show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal

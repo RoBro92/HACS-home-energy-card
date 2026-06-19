@@ -169,6 +169,15 @@ function joinLabels(parts) {
   return parts.filter((part) => part && part !== "-").join(" / ");
 }
 
+function titleCaseLabel(value) {
+  return String(value ?? "")
+    .split(" / ")
+    .map((part) =>
+      part.replace(/\b[a-z]/g, (letter) => letter.toUpperCase()),
+    )
+    .join(" / ");
+}
+
 function configChoice(value, choices, fallback) {
   const raw = String(value ?? "").trim().toLowerCase();
   return choices.includes(raw) ? raw : fallback;
@@ -221,7 +230,7 @@ function buildDetailGroups(config, hass, model, energyToday) {
   return {
     grid: [
       detailRow("Grid power", model.grid.powerLabel, model.entities.grid_power),
-      detailRow("Status", model.grid.status),
+      detailRow("Status", model.grid.displayStatus),
       detailRow("Energy today", model.energyToday.grid, energyToday.grid),
       ...configuredDetailRows(config, hass, "grid"),
     ].filter(Boolean),
@@ -239,7 +248,7 @@ function buildDetailGroups(config, hass, model, energyToday) {
     ev: [
       detailRow("Charge power", model.ev.powerLabel, model.entities.ev_power),
       detailRow("State of charge", model.ev.socLabel, model.entities.ev_soc),
-      detailRow("Charging state", model.ev.status, model.entities.ev_charging_state),
+      detailRow("Charging state", model.ev.displayStatus, model.entities.ev_charging_state),
       ...configuredDetailRows(config, hass, "ev"),
     ].filter(Boolean),
     battery: [
@@ -402,6 +411,7 @@ export function buildEnergyModel(config = {}, hass) {
     mode,
     entities,
     visible,
+    showTitle: entityEnabled(config.show_title ?? config.showTitle, hass, false),
     showDailySummary: entityEnabled(config.show_daily_summary ?? config.showDailySummary, hass, false),
     showStatusBar: entityEnabled(config.show_bottom_bar ?? config.showBottomBar, hass, true),
     nodeDetail: configChoice(config.node_detail ?? config.nodeDetail, ["minimal", "full"], "minimal"),
@@ -409,26 +419,32 @@ export function buildEnergyModel(config = {}, hass) {
       watts: gridWatts,
       powerLabel: formatPower(gridWatts),
       status: statusFromPower(gridWatts, "importing", "exporting"),
+      displayStatus: titleCaseLabel(statusFromPower(gridWatts, "importing", "exporting")),
     },
     solar: {
       watts: solarWatts,
       powerLabel: formatPower(solarWatts),
       status: solarWatts > ACTIVE_THRESHOLD_W ? "producing" : "idle",
+      displayStatus: titleCaseLabel(solarWatts > ACTIVE_THRESHOLD_W ? "producing" : "idle"),
       efficiencyLabel: solarEfficiency,
       statusLabel: joinLabels([solarWatts > ACTIVE_THRESHOLD_W ? "producing" : "idle", solarEfficiency]),
+      displayStatusLabel: titleCaseLabel(joinLabels([solarWatts > ACTIVE_THRESHOLD_W ? "producing" : "idle", solarEfficiency])),
       pillValue: joinLabels([formatPower(solarWatts), solarEfficiency]),
     },
     house: {
       watts: houseWatts,
       powerLabel: formatPower(houseWatts),
       status: "consuming",
+      displayStatus: "Consuming",
     },
     ev: {
       watts: evWatts,
       powerLabel: formatPower(evWatts),
       socLabel: optionalPercent(evSoc) || "-",
       status: evStatus,
+      displayStatus: titleCaseLabel(evStatus),
       statusLabel: joinLabels([evStatus, optionalPercent(evSoc)]),
+      displayStatusLabel: titleCaseLabel(joinLabels([evStatus, optionalPercent(evSoc)])),
       pillValue: joinLabels([formatPower(evWatts), optionalPercent(evSoc)]),
     },
     battery: {
@@ -437,7 +453,9 @@ export function buildEnergyModel(config = {}, hass) {
       socLabel: batterySocLabel,
       capacityLabel: batteryCapacityLabel,
       status: statusFromPower(batteryWatts, "charging", "discharging"),
+      displayStatus: titleCaseLabel(statusFromPower(batteryWatts, "charging", "discharging")),
       statusLabel: joinLabels([statusFromPower(batteryWatts, "charging", "discharging"), batterySocLabel, batteryCapacityLabel]),
+      displayStatusLabel: titleCaseLabel(joinLabels([statusFromPower(batteryWatts, "charging", "discharging"), batterySocLabel, batteryCapacityLabel])),
       pillValue: joinLabels([formatPower(batteryWatts), batterySocLabel]),
     },
     energyToday: {
@@ -1068,6 +1086,7 @@ class EnergyHomeVisualCard extends LitElement {
       show_solar: true,
       show_battery: true,
       solar_capacity_kw: 5,
+      show_title: false,
       show_daily_summary: false,
       show_bottom_bar: true,
       node_detail: "minimal",
@@ -1116,19 +1135,19 @@ class EnergyHomeVisualCard extends LitElement {
           <div class="mid">
             ${this.renderFlows(model)}
             ${model.visible.solar
-              ? this.renderNode("solar", "Solar", model.solar.powerLabel, model.solar.statusLabel)
+              ? this.renderNode("solar", "Solar", model.solar.powerLabel, model.solar.displayStatusLabel)
               : html``}
-            ${this.renderNode("grid", "Grid", model.grid.powerLabel, model.grid.status)}
-            ${this.renderNode("house", "Home", model.house.powerLabel, model.house.status)}
+            ${this.renderNode("grid", "Grid", model.grid.powerLabel, model.grid.displayStatus)}
+            ${this.renderNode("house", "Home", model.house.powerLabel, model.house.displayStatus)}
             ${model.visible.ev
-              ? this.renderNode("ev", "EV", model.ev.powerLabel, model.ev.statusLabel)
+              ? this.renderNode("ev", "EV", model.ev.powerLabel, model.ev.displayStatusLabel)
               : html``}
             ${model.visible.battery
               ? this.renderNode(
                   "battery",
                   "Battery",
                   model.battery.powerLabel,
-                  model.battery.statusLabel,
+                  model.battery.displayStatusLabel,
                 )
               : html``}
           </div>
@@ -1140,12 +1159,17 @@ class EnergyHomeVisualCard extends LitElement {
   }
 
   renderTopbar(model) {
+    if (!model.showTitle && !model.showDailySummary) return html``;
     return html`
       <div class="topbar ${model.showDailySummary ? "has-summary" : ""}">
-        <div>
-          <div class="eyebrow">${model.subtitle}</div>
-          <div class="title">${model.title}</div>
-        </div>
+        ${model.showTitle
+          ? html`
+              <div>
+                <div class="eyebrow">${model.subtitle}</div>
+                <div class="title">${model.title}</div>
+              </div>
+            `
+          : html``}
         ${model.showDailySummary
           ? html`
               <div class="summary" aria-label="Daily energy summary">
@@ -1227,18 +1251,18 @@ class EnergyHomeVisualCard extends LitElement {
   renderStatusbar(model) {
     return html`
       <div class="statusbar">
-        ${this.renderPill("grid", "Electricity", model.grid.status, model.grid.powerLabel, "mdi:transmission-tower", "#58bfff")}
+        ${this.renderPill("grid", "Electricity", model.grid.displayStatus, model.grid.powerLabel, "mdi:transmission-tower", "#58bfff")}
         ${model.visible.solar
-          ? this.renderPill("solar", "Solar", model.solar.status, model.solar.pillValue, "mdi:solar-power-variant", "#ffd15a")
+          ? this.renderPill("solar", "Solar", model.solar.displayStatus, model.solar.pillValue, "mdi:solar-power-variant", "#ffd15a")
           : html``}
         ${model.visible.ev
-          ? this.renderPill("ev", "Electric Vehicle", model.ev.status, model.ev.pillValue, "mdi:car-electric", "#50eaff")
+          ? this.renderPill("ev", "Electric Vehicle", model.ev.displayStatus, model.ev.pillValue, "mdi:car-electric", "#50eaff")
           : html``}
         ${model.visible.battery
           ? this.renderPill(
               "battery",
               "Battery",
-              model.battery.status,
+              model.battery.displayStatus,
               model.battery.pillValue,
               "mdi:home-battery",
               "#56f0d0",
@@ -1267,11 +1291,11 @@ class EnergyHomeVisualCard extends LitElement {
     const active = this._activeDetail;
     if (!active || !model.details?.[active]) return html``;
     const labels = {
-      grid: ["Electricity", model.grid.status, "mdi:transmission-tower", "#58bfff"],
-      solar: ["Solar", model.solar.statusLabel, "mdi:solar-power-variant", "#ffd15a"],
-      house: ["Home", model.house.status, "mdi:home", "#ffffff"],
-      ev: ["Electric Vehicle", model.ev.statusLabel, "mdi:car-electric", "#50eaff"],
-      battery: ["Battery", model.battery.statusLabel, "mdi:home-battery", "#56f0d0"],
+      grid: ["Electricity", model.grid.displayStatus, "mdi:transmission-tower", "#58bfff"],
+      solar: ["Solar", model.solar.displayStatusLabel, "mdi:solar-power-variant", "#ffd15a"],
+      house: ["Home", model.house.displayStatus, "mdi:home", "#ffffff"],
+      ev: ["Electric Vehicle", model.ev.displayStatusLabel, "mdi:car-electric", "#50eaff"],
+      battery: ["Battery", model.battery.displayStatusLabel, "mdi:home-battery", "#56f0d0"],
     };
     const [title, status, icon, color] = labels[active] || labels.house;
     return html`
@@ -1331,6 +1355,7 @@ const EDITOR_FIELDS = [
   ["Show Battery", ["show_battery"], "true, false, or input_boolean.has_battery"],
   ["Solar Capacity (kW)", ["solar_capacity_kw"], "5"],
   ["Battery Capacity (kWh)", ["battery_capacity_kwh"], "13.5"],
+  ["Show Title", ["show_title"], "false"],
   ["Show Daily Summary", ["show_daily_summary"], "false"],
   ["Show Bottom Bar", ["show_bottom_bar"], "true"],
   ["Node Detail", ["node_detail"], "minimal or full"],
@@ -1405,15 +1430,15 @@ class EnergyHomeVisualCardEditor extends LitElement {
       <div class="editor">
         <div class="section-title">Card</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(0, 10).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(0, 11).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
         <div class="section-title">Sensors</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(10, 24).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(11, 25).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
         <div class="section-title">Detail Sensors</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(24).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(25).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
       </div>
     `;
