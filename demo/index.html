@@ -31,12 +31,11 @@
       main {
         min-height: 0;
         display: grid;
+        place-items: center;
       }
 
       energy-home-visual-card {
-        align-self: center;
-        --energy-card-height: calc(100svh - 96px);
-        --energy-card-min-height: 560px;
+        width: min(100%, calc((100svh - 96px) * 1.777));
         --energy-card-radius: 8px;
         --energy-card-shadow: 0 30px 90px rgba(0, 0, 0, .58);
       }
@@ -131,7 +130,7 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../energy-home-visual-card.js?v=preview-8");
+      await import("../energy-home-visual-card.js?v=preview-12");
 
       const card = document.querySelector("energy-home-visual-card");
       const evToggle = document.querySelector("#evToggle");

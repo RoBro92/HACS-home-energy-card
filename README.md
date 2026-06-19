@@ -109,7 +109,7 @@ The card chooses the background in this order:
 card_mod:
   style: |
     energy-home-visual-card {
-      --energy-card-height: 82vh;
+      --energy-card-aspect-ratio: 1672 / 941;
       --energy-card-radius: 8px;
       --energy-card-accent: #58d5ff;
       --energy-card-shadow: none;

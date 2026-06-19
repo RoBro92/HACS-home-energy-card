@@ -304,8 +304,8 @@ class EnergyHomeVisualCard extends LitElement {
       --energy-card-accent: #58d5ff;
       --energy-card-gold: #ffd15a;
       --energy-card-radius: 8px;
-      --energy-card-height: min(76vh, 760px);
-      --energy-card-min-height: 420px;
+      --energy-card-aspect-ratio: 1672 / 941;
+      --energy-card-padding: clamp(16px, 2.4vw, 34px);
       --energy-card-glass: rgba(4, 12, 18, .58);
       --energy-card-border: rgba(220, 242, 255, .24);
       --energy-card-muted: rgba(232, 245, 255, .72);
@@ -317,8 +317,8 @@ class EnergyHomeVisualCard extends LitElement {
       display: block;
       position: relative;
       overflow: hidden;
-      min-height: var(--energy-card-min-height);
-      height: var(--energy-card-height);
+      width: 100%;
+      aspect-ratio: var(--energy-card-aspect-ratio);
       border-radius: var(--energy-card-radius);
       border: 1px solid var(--energy-card-border);
       background: #071015;
@@ -340,8 +340,7 @@ class EnergyHomeVisualCard extends LitElement {
         linear-gradient(180deg, rgba(0, 0, 0, .28), rgba(0, 0, 0, .06) 42%, rgba(0, 0, 0, .68)),
         var(--energy-background);
       background-position: center;
-      background-size: cover;
-      transform: scale(1.012);
+      background-size: 100% 100%, 100% 100%, 100% 100%;
       filter: saturate(1.08) contrast(1.06);
     }
 
@@ -365,16 +364,19 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .content {
-      position: relative;
+      position: absolute;
+      inset: 0;
       z-index: 2;
-      height: 100%;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      padding: clamp(16px, 2.4vw, 34px);
+      padding: var(--energy-card-padding);
       box-sizing: border-box;
     }
 
     .topbar {
+      position: absolute;
+      top: var(--energy-card-padding);
+      left: var(--energy-card-padding);
+      right: var(--energy-card-padding);
+      z-index: 3;
       display: grid;
       grid-template-columns: minmax(190px, 1fr) auto;
       gap: clamp(12px, 2vw, 28px);
@@ -433,8 +435,8 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .mid {
-      position: relative;
-      min-height: 0;
+      position: absolute;
+      inset: 0;
     }
 
     .flows {
@@ -520,7 +522,7 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .node-solar {
-      top: 9%;
+      top: 31%;
       left: 52%;
       color: #fff2bc;
     }
@@ -550,6 +552,11 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     .statusbar {
+      position: absolute;
+      left: var(--energy-card-padding);
+      right: var(--energy-card-padding);
+      bottom: var(--energy-card-padding);
+      z-index: 3;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: clamp(8px, 1.3vw, 16px);
@@ -610,11 +617,6 @@ class EnergyHomeVisualCard extends LitElement {
     }
 
     @media (max-width: 900px) {
-      :host {
-        --energy-card-height: 680px;
-        --energy-card-min-height: 620px;
-      }
-
       .topbar {
         grid-template-columns: 1fr;
       }
@@ -633,29 +635,49 @@ class EnergyHomeVisualCard extends LitElement {
       }
     }
 
-    @media (max-width: 560px) {
-      :host {
-        --energy-card-height: 720px;
+    @media (max-width: 980px) {
+      .statusbar {
+        display: none;
       }
+    }
 
+    @media (max-width: 560px) {
       .content {
-        padding: 14px;
+        --energy-card-padding: 14px;
       }
 
       .summary {
-        grid-template-columns: 1fr;
+        display: none;
       }
 
-      .statusbar {
-        grid-template-columns: 1fr;
+      .node {
+        min-width: 72px;
+        padding: 5px 7px;
+      }
+
+      .node-label {
+        font-size: 8px;
+      }
+
+      .node-value {
+        font-size: 15px;
+      }
+
+      .node-status {
+        display: none;
       }
 
       .node-solar {
-        left: 44%;
+        top: 27%;
+        left: 48%;
       }
 
       .node-house {
-        left: 33%;
+        left: 38%;
+      }
+
+      .node-battery {
+        left: 60%;
       }
     }
   `;
