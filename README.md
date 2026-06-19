@@ -36,6 +36,28 @@ show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
 
+labels:
+  grid: Grid
+  gridCard: Grid cost
+  house: Home
+  solar: Solar
+  ev: EV
+  evCard: EV
+  battery: Battery
+
+tariffs:
+  currency: £
+  import_rate_entity: sensor.current_import_rate
+  export_rate_entity: sensor.current_export_rate
+
+bottom_bar:
+  - type: cost
+    label: Grid cost
+  - type: sun
+  - solar
+  - ev
+  - battery
+
 entities:
   sun: sun.sun
   grid_power: sensor.grid_power_w
@@ -46,6 +68,14 @@ entities:
   ev_charging_state: binary_sensor.ev_charging
   battery_power: sensor.battery_power_w
   battery_soc: sensor.battery_soc
+
+node_info:
+  solar:
+    entity: sensor.solar_efficiency
+  ev:
+    entity: sensor.ev_range
+  battery:
+    entity: sensor.battery_temperature
 
 energy_today:
   grid: sensor.grid_energy_today
@@ -70,6 +100,7 @@ See `docs/setup.md`, `examples/dashboard.yaml`, and `examples/dashboard-no-ev.ya
 - Use `show_ev`, `show_solar`, and `show_battery` with booleans for a fixed dashboard, or helper entities for reusable dashboards.
 - Keep `show_title: false` and `show_daily_summary: false` for the clean visual layout shown above.
 - Add `detail_entities` only for sensors you actually have; missing detail rows are ignored.
+- Use `bottom_bar` to choose glance cards such as grid cost, sunrise/sunset, solar, EV, battery, or any custom entity.
 
 ## HACS Install
 
@@ -111,6 +142,14 @@ HACS installs the JavaScript module and bundled background images from `dist/`.
 | `show_daily_summary` | No | Shows the top daily kWh summary strip when true. Defaults to false. |
 | `show_bottom_bar` | No | Shows the bottom live-status bar when true. Defaults to true. |
 | `node_detail` | No | `minimal` shows compact floating nodes. `full` adds status text to nodes. |
+| `labels.grid/solar/house/ev/battery` | No | Renames floating nodes and detail panel titles. |
+| `labels.gridCard/evCard` | No | Renames bottom-bar labels where a shorter label is useful. |
+| `node_info.<group>.entity` | No | Adds one extra compact value to a floating node. |
+| `bottom_bar` | No | Ordered list of bottom cards. Built-ins are `grid`, `cost`, `sun`, `solar`, `house`, `ev`, and `battery`; `entity` cards support custom sensors. |
+| `tariffs.import_rate/export_rate` | No | Fixed import/export rates per kWh for grid cost calculations. |
+| `tariffs.import_rate_entity/export_rate_entity` | No | Dynamic rate sensors for multi-tariff providers. These override fixed rates when available. |
+| `tariffs.currency` | No | Currency symbol for grid cost. Defaults to `£`. |
+| `actions.<group>[]` | No | Optional Home Assistant service-call buttons shown in a detail panel, useful for EV lock/unlock or boost charging. |
 | `entities.sun` | No | Sun entity for day/night switching. Defaults to `sun.sun`; falls back to local time if unavailable. |
 | `entities.grid_power` | Yes | Current grid power in W. Positive is importing, negative is exporting. |
 | `entities.solar_power` | When solar shown | Current solar production in W. |

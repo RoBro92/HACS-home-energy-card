@@ -9,6 +9,25 @@ show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
 
+labels:
+  grid: Grid
+  gridCard: Grid cost
+  house: Home
+  solar: Solar
+  battery: Battery
+
+tariffs:
+  currency: £
+  import_rate_entity: sensor.current_import_rate
+  export_rate_entity: sensor.current_export_rate
+
+bottom_bar:
+  - type: cost
+    label: Grid cost
+  - type: sun
+  - solar
+  - battery
+
 entities:
   sun: sun.sun
   grid_power: sensor.grid_power_w
@@ -16,6 +35,12 @@ entities:
   house_power: sensor.house_consumption_w
   battery_power: sensor.battery_power_w
   battery_soc: sensor.battery_soc
+
+node_info:
+  solar:
+    entity: sensor.solar_efficiency
+  battery:
+    entity: sensor.battery_temperature
 
 energy_today:
   grid: sensor.grid_energy_today

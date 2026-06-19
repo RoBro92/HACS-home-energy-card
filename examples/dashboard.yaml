@@ -9,6 +9,28 @@ show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
 
+labels:
+  grid: Grid
+  gridCard: Grid cost
+  house: Home
+  solar: Solar
+  ev: EV
+  evCard: EV
+  battery: Battery
+
+tariffs:
+  currency: £
+  import_rate_entity: sensor.current_import_rate
+  export_rate_entity: sensor.current_export_rate
+
+bottom_bar:
+  - type: cost
+    label: Grid cost
+  - type: sun
+  - solar
+  - ev
+  - battery
+
 entities:
   sun: sun.sun
   grid_power: sensor.grid_power_w
@@ -19,6 +41,14 @@ entities:
   ev_charging_state: binary_sensor.ev_charging
   battery_power: sensor.battery_power_w
   battery_soc: sensor.battery_soc
+
+node_info:
+  solar:
+    entity: sensor.solar_efficiency
+  ev:
+    entity: sensor.ev_range
+  battery:
+    entity: sensor.battery_temperature
 
 energy_today:
   grid: sensor.grid_energy_today
@@ -45,6 +75,17 @@ detail_entities:
     current: sensor.battery_current
     charge_24h: sensor.battery_charge_24h
     discharge_24h: sensor.battery_discharge_24h
+
+actions:
+  ev:
+    - label: Boost charge
+      service: switch.turn_on
+      target:
+        entity_id: switch.ev_boost
+    - label: Unlock
+      service: lock.unlock
+      target:
+        entity_id: lock.ev
 
 card_mod:
   style: |

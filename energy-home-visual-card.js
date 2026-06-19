@@ -187,6 +187,7 @@ function entityDisplayValue(hass, entityId) {
   const value = stateValue(hass, entityId);
   if (value === "unknown" || value === "unavailable") return "-";
   const unit = stateAttributes(hass, entityId).unit_of_measurement;
+  if (unit === "%") return `${value}%`;
   return unit ? `${value} ${unit}` : String(value);
 }
 
@@ -212,6 +213,258 @@ const DETAIL_LABELS = {
   state: "State",
 };
 
+const DEFAULT_LABELS = {
+  grid: "Grid",
+  gridCard: "Electricity",
+  solar: "Solar",
+  house: "Home",
+  ev: "EV",
+  evCard: "Electric Vehicle",
+  battery: "Battery",
+};
+
+const ICONS = {
+  grid: "mdi:transmission-tower",
+  cost: "mdi:currency-gbp",
+  solar: "mdi:solar-power-variant",
+  house: "mdi:home",
+  ev: "mdi:car-electric",
+  battery: "mdi:home-battery",
+  sun: "mdi:weather-sunset",
+  entity: "mdi:information-outline",
+};
+
+const COLORS = {
+  grid: "#58bfff",
+  cost: "#8ee6a5",
+  solar: "#ffd15a",
+  house: "#ffffff",
+  ev: "#50eaff",
+  battery: "#56f0d0",
+  sun: "#ffb86b",
+  entity: "#d9f2ff",
+};
+
+function configLabels(config = {}) {
+  return {
+    ...DEFAULT_LABELS,
+    ...(config.labels || {}),
+  };
+}
+
+function readConfiguredEntity(config, key) {
+  const groups = [config.node_info, config.nodeInfo, config.node_entities, config.nodeEntities];
+  for (const group of groups) {
+    if (group?.[key]) return group[key];
+  }
+  return null;
+}
+
+function nodeExtraLabel(config, hass, key) {
+  const entry = readConfiguredEntity(config, key);
+  if (!entry) return null;
+  if (typeof entry === "string") return entityDisplayValue(hass, entry);
+  if (typeof entry === "object" && entry.entity) {
+    const value = entityDisplayValue(hass, entry.entity);
+    if (!value || value === "-") return null;
+    return entry.label ? `${entry.label} ${value}` : value;
+  }
+  return null;
+}
+
+function rateValue(config, hass, direction) {
+  const tariffs = config.tariffs || config.rates || {};
+  const nested = tariffs[direction] || {};
+  const entity =
+    nested.rate_entity ||
+    nested.entity ||
+    tariffs[`${direction}_rate_entity`] ||
+    tariffs[`${direction}RateEntity`];
+  const fixed =
+    nested.rate ??
+    nested.default_rate ??
+    tariffs[`${direction}_rate`] ??
+    tariffs[`${direction}Rate`];
+  return parseNumber(stateValue(hass, entity)) ?? parseNumber(fixed);
+}
+
+function currencySymbol(config) {
+  return config.tariffs?.currency || config.rates?.currency || config.currency || "£";
+}
+
+function formatMoneyPerHour(value, currency) {
+  const parsed = parseNumber(value);
+  if (parsed === null) return "-";
+  const prefix = parsed < 0 ? "-" : "";
+  return `${prefix}${currency}${Math.abs(parsed).toFixed(2)}/h`;
+}
+
+function gridCostModel(config, hass, gridWatts) {
+  const importing = gridWatts >= 0;
+  const rate = rateValue(config, hass, importing ? "import" : "export");
+  if (rate === null) {
+    return {
+      watts: gridWatts,
+      rate: null,
+      status: importing ? "import cost" : "export credit",
+      displayStatus: importing ? "Import Cost" : "Export Credit",
+      valueLabel: "-",
+    };
+  }
+  const hourly = (Math.abs(gridWatts) / 1000) * rate * (importing ? 1 : -1);
+  return {
+    watts: gridWatts,
+    rate,
+    status: importing ? "import cost" : "export credit",
+    displayStatus: importing ? "Import Cost" : "Export Credit",
+    valueLabel: formatMoneyPerHour(hourly, currencySymbol(config)),
+  };
+}
+
+function formatEventTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+}
+
+function sunCardModel(config, hass) {
+  const entityId = config.entities?.sun || "sun.sun";
+  const state = String(stateValue(hass, entityId)).toLowerCase();
+  const attrs = stateAttributes(hass, entityId);
+  const isDay = state === "above_horizon";
+  return {
+    kind: "sun",
+    label: isDay ? "Sunset" : "Sunrise",
+    status: isDay ? "Today" : "Tomorrow",
+    value: formatEventTime(isDay ? attrs.next_setting : attrs.next_rising),
+    icon: ICONS.sun,
+    color: COLORS.sun,
+    entityId,
+  };
+}
+
+function normaliseAction(action) {
+  if (!action || typeof action !== "object" || !action.service) return null;
+  const [domain, serviceName] = String(action.service).split(".");
+  if (!domain || !serviceName) return null;
+  return {
+    label: action.label || titleCaseLabel(serviceName.replace(/_/g, " ")),
+    icon: action.icon || "mdi:gesture-tap-button",
+    service: action.service,
+    domain,
+    serviceName,
+    target: action.target || {},
+    data: action.data || action.service_data || action.serviceData || {},
+  };
+}
+
+function buildActions(config) {
+  const actions = config.actions || config.quick_actions || config.quickActions || {};
+  return Object.fromEntries(
+    ["grid", "solar", "house", "ev", "battery"].map((key) => [
+      key,
+      (Array.isArray(actions[key]) ? actions[key] : []).map(normaliseAction).filter(Boolean),
+    ]),
+  );
+}
+
+function predefinedBottomCard(type, model) {
+  const cards = {
+    grid: {
+      kind: "grid",
+      label: model.grid.cardLabel,
+      status: model.grid.displayStatus,
+      value: model.grid.powerLabel,
+      icon: ICONS.grid,
+      color: COLORS.grid,
+    },
+    cost: {
+      kind: "cost",
+      label: "Grid cost",
+      status: model.cost.displayStatus,
+      value: model.cost.valueLabel,
+      icon: ICONS.cost,
+      color: COLORS.cost,
+      detailKind: "grid",
+    },
+    solar: {
+      kind: "solar",
+      label: model.solar.label,
+      status: model.solar.displayStatus,
+      value: model.solar.pillValue,
+      icon: ICONS.solar,
+      color: COLORS.solar,
+    },
+    house: {
+      kind: "house",
+      label: model.house.label,
+      status: model.house.displayStatus,
+      value: model.house.powerLabel,
+      icon: ICONS.house,
+      color: COLORS.house,
+    },
+    ev: {
+      kind: "ev",
+      label: model.ev.cardLabel,
+      status: model.ev.displayStatus,
+      value: model.ev.pillValue,
+      icon: ICONS.ev,
+      color: COLORS.ev,
+    },
+    battery: {
+      kind: "battery",
+      label: model.battery.label,
+      status: model.battery.displayStatus,
+      value: model.battery.pillValue,
+      icon: ICONS.battery,
+      color: COLORS.battery,
+    },
+  };
+  return cards[type] || null;
+}
+
+function customBottomCard(item, config, hass, model) {
+  const type = typeof item === "string" ? item : item?.type;
+  if (!type) return null;
+  if (type === "sun") return { ...sunCardModel(config, hass), ...(typeof item === "object" ? item : {}) };
+  if (type === "entity" && typeof item === "object" && item.entity) {
+    return {
+      kind: "entity",
+      label: item.label || labelFromDetailKey(item.entity.split(".").pop()),
+      status: item.status || "",
+      value: entityDisplayValue(hass, item.entity),
+      icon: item.icon || ICONS.entity,
+      color: item.color || COLORS.entity,
+      entityId: item.entity,
+    };
+  }
+  const card = predefinedBottomCard(type, model);
+  if (!card) return null;
+  return typeof item === "object"
+    ? {
+        ...card,
+        label: item.label || card.label,
+        status: item.status || card.status,
+        icon: item.icon || card.icon,
+        color: item.color || card.color,
+      }
+    : card;
+}
+
+function buildBottomCards(config, hass, model) {
+  const configured = config.bottom_bar || config.bottomBar;
+  if (Array.isArray(configured) && configured.length) {
+    return configured.map((item) => customBottomCard(item, config, hass, model)).filter(Boolean);
+  }
+  return [
+    predefinedBottomCard("grid", model),
+    model.visible.solar ? predefinedBottomCard("solar", model) : null,
+    model.visible.ev ? predefinedBottomCard("ev", model) : null,
+    model.visible.battery ? predefinedBottomCard("battery", model) : null,
+  ].filter(Boolean);
+}
+
 function labelFromDetailKey(key) {
   if (DETAIL_LABELS[key]) return DETAIL_LABELS[key];
   return String(key)
@@ -231,6 +484,8 @@ function buildDetailGroups(config, hass, model, energyToday) {
     grid: [
       detailRow("Grid power", model.grid.powerLabel, model.entities.grid_power),
       detailRow("Status", model.grid.displayStatus),
+      detailRow("Current cost", model.cost.valueLabel),
+      detailRow(model.cost.rate === null ? null : `${model.cost.displayStatus} rate`, model.cost.rate === null ? null : `${model.cost.rate}/kWh`),
       detailRow("Energy today", model.energyToday.grid, energyToday.grid),
       ...configuredDetailRows(config, hass, "grid"),
     ].filter(Boolean),
@@ -403,6 +658,7 @@ export function buildEnergyModel(config = {}, hass) {
   );
   const batterySocLabel = formatPercent(batterySoc);
   const batteryCapacityLabel = formatBatteryCapacity(batteryCapacity);
+  const labels = configLabels(config);
 
   const model = {
     title: config.title || "Energy Flow",
@@ -415,13 +671,21 @@ export function buildEnergyModel(config = {}, hass) {
     showDailySummary: entityEnabled(config.show_daily_summary ?? config.showDailySummary, hass, false),
     showStatusBar: entityEnabled(config.show_bottom_bar ?? config.showBottomBar, hass, true),
     nodeDetail: configChoice(config.node_detail ?? config.nodeDetail, ["minimal", "full"], "minimal"),
+    labels,
+    cost: gridCostModel(config, hass, gridWatts),
+    actions: buildActions(config),
     grid: {
+      label: labels.grid,
+      cardLabel: labels.gridCard || labels.grid,
+      nodeExtra: nodeExtraLabel(config, hass, "grid"),
       watts: gridWatts,
       powerLabel: formatPower(gridWatts),
       status: statusFromPower(gridWatts, "importing", "exporting"),
       displayStatus: titleCaseLabel(statusFromPower(gridWatts, "importing", "exporting")),
     },
     solar: {
+      label: labels.solar,
+      nodeExtra: nodeExtraLabel(config, hass, "solar"),
       watts: solarWatts,
       powerLabel: formatPower(solarWatts),
       status: solarWatts > ACTIVE_THRESHOLD_W ? "producing" : "idle",
@@ -432,12 +696,17 @@ export function buildEnergyModel(config = {}, hass) {
       pillValue: joinLabels([formatPower(solarWatts), solarEfficiency]),
     },
     house: {
+      label: labels.house,
+      nodeExtra: nodeExtraLabel(config, hass, "house"),
       watts: houseWatts,
       powerLabel: formatPower(houseWatts),
       status: "consuming",
       displayStatus: "Consuming",
     },
     ev: {
+      label: labels.ev,
+      cardLabel: labels.evCard || labels.ev,
+      nodeExtra: nodeExtraLabel(config, hass, "ev"),
       watts: evWatts,
       powerLabel: formatPower(evWatts),
       socLabel: optionalPercent(evSoc) || "-",
@@ -448,6 +717,8 @@ export function buildEnergyModel(config = {}, hass) {
       pillValue: joinLabels([formatPower(evWatts), optionalPercent(evSoc)]),
     },
     battery: {
+      label: labels.battery,
+      nodeExtra: nodeExtraLabel(config, hass, "battery"),
       watts: batteryWatts,
       powerLabel: formatPower(batteryWatts),
       socLabel: batterySocLabel,
@@ -466,6 +737,7 @@ export function buildEnergyModel(config = {}, hass) {
     flows: [],
   };
   model.details = buildDetailGroups(config, hass, model, energyToday);
+  model.bottomCards = buildBottomCards(config, hass, model);
 
   // SVG paths are defined in a stable 100x58 viewBox, so the same paths scale cleanly
   // across wall panels, tablets, and fullscreen dashboards.
@@ -792,7 +1064,7 @@ class EnergyHomeVisualCard extends LitElement {
       bottom: var(--energy-card-padding);
       z-index: 3;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
       gap: clamp(8px, 1.3vw, 16px);
     }
 
@@ -950,6 +1222,32 @@ class EnergyHomeVisualCard extends LitElement {
       white-space: nowrap;
     }
 
+    .detail-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, .10);
+    }
+
+    .detail-action {
+      display: inline-grid;
+      grid-template-columns: auto 1fr;
+      gap: 7px;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      background: rgba(255, 255, 255, .06);
+      cursor: pointer;
+    }
+
+    .detail-action:hover {
+      border-color: rgba(255, 255, 255, .34);
+      background: rgba(255, 255, 255, .10);
+    }
+
     @keyframes detailFade {
       from { opacity: 0; }
       to { opacity: 1; }
@@ -977,7 +1275,7 @@ class EnergyHomeVisualCard extends LitElement {
       }
 
       .statusbar {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
         gap: 6px;
       }
 
@@ -1135,19 +1433,20 @@ class EnergyHomeVisualCard extends LitElement {
           <div class="mid">
             ${this.renderFlows(model)}
             ${model.visible.solar
-              ? this.renderNode("solar", "Solar", model.solar.powerLabel, model.solar.displayStatusLabel)
+              ? this.renderNode("solar", model.solar.label, model.solar.powerLabel, model.solar.displayStatusLabel, model.solar.nodeExtra)
               : html``}
-            ${this.renderNode("grid", "Grid", model.grid.powerLabel, model.grid.displayStatus)}
-            ${this.renderNode("house", "Home", model.house.powerLabel, model.house.displayStatus)}
+            ${this.renderNode("grid", model.grid.label, model.grid.powerLabel, model.grid.displayStatus, model.grid.nodeExtra)}
+            ${this.renderNode("house", model.house.label, model.house.powerLabel, model.house.displayStatus, model.house.nodeExtra)}
             ${model.visible.ev
-              ? this.renderNode("ev", "EV", model.ev.powerLabel, model.ev.displayStatusLabel)
+              ? this.renderNode("ev", model.ev.label, model.ev.powerLabel, model.ev.displayStatusLabel, model.ev.nodeExtra)
               : html``}
             ${model.visible.battery
               ? this.renderNode(
                   "battery",
-                  "Battery",
+                  model.battery.label,
                   model.battery.powerLabel,
                   model.battery.displayStatusLabel,
+                  model.battery.nodeExtra,
                 )
               : html``}
           </div>
@@ -1238,12 +1537,13 @@ class EnergyHomeVisualCard extends LitElement {
     `;
   }
 
-  renderNode(kind, label, value, status) {
+  renderNode(kind, label, value, status, extra) {
     return html`
       <button class="node node-${kind}" type="button" @click=${() => this.openDetail(kind)} aria-label=${`${label} details`}>
         <span class="node-label">${label}</span>
         <span class="node-value">${value}</span>
         ${this._model?.nodeDetail === "full" ? html`<span class="node-status">${status}</span>` : html``}
+        ${extra ? html`<span class="node-status">${extra}</span>` : html``}
       </button>
     `;
   }
@@ -1251,36 +1551,27 @@ class EnergyHomeVisualCard extends LitElement {
   renderStatusbar(model) {
     return html`
       <div class="statusbar">
-        ${this.renderPill("grid", "Electricity", model.grid.displayStatus, model.grid.powerLabel, "mdi:transmission-tower", "#58bfff")}
-        ${model.visible.solar
-          ? this.renderPill("solar", "Solar", model.solar.displayStatus, model.solar.pillValue, "mdi:solar-power-variant", "#ffd15a")
-          : html``}
-        ${model.visible.ev
-          ? this.renderPill("ev", "Electric Vehicle", model.ev.displayStatus, model.ev.pillValue, "mdi:car-electric", "#50eaff")
-          : html``}
-        ${model.visible.battery
-          ? this.renderPill(
-              "battery",
-              "Battery",
-              model.battery.displayStatus,
-              model.battery.pillValue,
-              "mdi:home-battery",
-              "#56f0d0",
-            )
-          : html``}
+        ${model.bottomCards.map((card) => this.renderPill(card))}
       </div>
     `;
   }
 
-  renderPill(kind, label, status, value, icon, color) {
+  renderPill(card) {
+    const detailKind = card.detailKind || card.kind;
     return html`
-      <button class="pill" type="button" style="--pill-color:${color}" @click=${() => this.openDetail(kind)} aria-label=${`${label} details`}>
-        <ha-icon icon=${icon}></ha-icon>
+      <button
+        class="pill"
+        type="button"
+        style="--pill-color:${card.color || COLORS.entity}"
+        @click=${() => this.openPill(card)}
+        aria-label=${`${card.label} details`}
+      >
+        <ha-icon icon=${card.icon || ICONS.entity}></ha-icon>
         <span>
-          <span class="pill-label">${label}</span>
+          <span class="pill-label">${card.label}</span>
           <span class="pill-main">
-            <span class="pill-status">${status}</span>
-            <span class="pill-value">${value}</span>
+            <span class="pill-status">${card.status}</span>
+            <span class="pill-value">${card.value}</span>
           </span>
         </span>
       </button>
@@ -1291,13 +1582,14 @@ class EnergyHomeVisualCard extends LitElement {
     const active = this._activeDetail;
     if (!active || !model.details?.[active]) return html``;
     const labels = {
-      grid: ["Electricity", model.grid.displayStatus, "mdi:transmission-tower", "#58bfff"],
-      solar: ["Solar", model.solar.displayStatusLabel, "mdi:solar-power-variant", "#ffd15a"],
-      house: ["Home", model.house.displayStatus, "mdi:home", "#ffffff"],
-      ev: ["Electric Vehicle", model.ev.displayStatusLabel, "mdi:car-electric", "#50eaff"],
-      battery: ["Battery", model.battery.displayStatusLabel, "mdi:home-battery", "#56f0d0"],
+      grid: [model.grid.cardLabel, model.grid.displayStatus, ICONS.grid, COLORS.grid],
+      solar: [model.solar.label, model.solar.displayStatusLabel, ICONS.solar, COLORS.solar],
+      house: [model.house.label, model.house.displayStatus, ICONS.house, COLORS.house],
+      ev: [model.ev.cardLabel, model.ev.displayStatusLabel, ICONS.ev, COLORS.ev],
+      battery: [model.battery.label, model.battery.displayStatusLabel, ICONS.battery, COLORS.battery],
     };
     const [title, status, icon, color] = labels[active] || labels.house;
+    const actions = model.actions?.[active] || [];
     return html`
       <div class="detail-backdrop" @click=${(event) => this.closeDetail(event)}>
         <section class="detail-panel" style="--pill-color:${color}" @click=${(event) => event.stopPropagation()}>
@@ -1321,10 +1613,32 @@ class EnergyHomeVisualCard extends LitElement {
                 </button>
               `,
             )}
+            ${actions.length
+              ? html`
+                  <div class="detail-actions">
+                    ${actions.map(
+                      (action) => html`
+                        <button class="detail-action" type="button" @click=${() => this.callQuickAction(action)}>
+                          <ha-icon icon=${action.icon}></ha-icon>
+                          <span>${action.label}</span>
+                        </button>
+                      `,
+                    )}
+                  </div>
+                `
+              : html``}
           </div>
         </section>
       </div>
     `;
+  }
+
+  openPill(card) {
+    if (card.entityId) {
+      this.openMoreInfo(card.entityId);
+      return;
+    }
+    this.openDetail(card.detailKind || card.kind);
   }
 
   openDetail(kind) {
@@ -1339,6 +1653,20 @@ class EnergyHomeVisualCard extends LitElement {
   openDetailEntity(entityId) {
     if (!entityId) return;
     this.openMoreInfo(entityId);
+  }
+
+  callQuickAction(action) {
+    if (!action?.domain || !action?.serviceName) return;
+    if (this.hass?.callService) {
+      this.hass.callService(action.domain, action.serviceName, action.data || {}, action.target || {});
+      return;
+    }
+    fireEvent(this, "hass-call-service", {
+      domain: action.domain,
+      service: action.serviceName,
+      serviceData: action.data || {},
+      target: action.target || {},
+    });
   }
 
   openMoreInfo(entityId) {
@@ -1359,6 +1687,18 @@ const EDITOR_FIELDS = [
   ["Show Daily Summary", ["show_daily_summary"], "false"],
   ["Show Bottom Bar", ["show_bottom_bar"], "true"],
   ["Node Detail", ["node_detail"], "minimal or full"],
+  ["Grid Label", ["labels", "grid"], "Grid"],
+  ["Grid Bottom Label", ["labels", "gridCard"], "Electricity"],
+  ["Home Label", ["labels", "house"], "Home"],
+  ["Solar Label", ["labels", "solar"], "Solar"],
+  ["EV Label", ["labels", "ev"], "EV"],
+  ["EV Bottom Label", ["labels", "evCard"], "Electric Vehicle"],
+  ["Battery Label", ["labels", "battery"], "Battery"],
+  ["Import Rate", ["tariffs", "import_rate"], "0.34"],
+  ["Export Rate", ["tariffs", "export_rate"], "0.15"],
+  ["Import Rate Entity", ["tariffs", "import_rate_entity"], "sensor.current_import_rate"],
+  ["Export Rate Entity", ["tariffs", "export_rate_entity"], "sensor.current_export_rate"],
+  ["Currency", ["tariffs", "currency"], "£"],
   ["Sun / Day-Night Entity", ["entities", "sun"], "sun.sun"],
   ["Grid Import/Export Power", ["entities", "grid_power"], "sensor.grid_power_w"],
   ["Home Power Usage", ["entities", "house_power"], "sensor.house_consumption_w"],
@@ -1373,6 +1713,11 @@ const EDITOR_FIELDS = [
   ["Grid Energy Today", ["energy_today", "grid"], "sensor.grid_energy_today"],
   ["Solar Energy Today", ["energy_today", "solar"], "sensor.solar_energy_today"],
   ["Home Energy Today", ["energy_today", "home"], "sensor.home_energy_today"],
+  ["Grid Node Extra", ["node_info", "grid", "entity"], "sensor.grid_voltage"],
+  ["Home Node Extra", ["node_info", "house", "entity"], "sensor.home_temperature"],
+  ["Solar Node Extra", ["node_info", "solar", "entity"], "sensor.solar_efficiency"],
+  ["EV Node Extra", ["node_info", "ev", "entity"], "sensor.ev_range"],
+  ["Battery Node Extra", ["node_info", "battery", "entity"], "sensor.battery_temperature"],
   ["Solar PV Voltage", ["detail_entities", "solar", "pv_voltage"], "sensor.solar_pv_voltage"],
   ["Solar PV Current", ["detail_entities", "solar", "pv_current"], "sensor.solar_pv_current"],
   ["Solar Energy 24h", ["detail_entities", "solar", "energy_24h"], "sensor.solar_energy_24h"],
@@ -1430,15 +1775,15 @@ class EnergyHomeVisualCardEditor extends LitElement {
       <div class="editor">
         <div class="section-title">Card</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(0, 11).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(0, 23).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
         <div class="section-title">Sensors</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(11, 25).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(23, 42).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
         <div class="section-title">Detail Sensors</div>
         <div class="field-grid">
-          ${EDITOR_FIELDS.slice(25).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
+          ${EDITOR_FIELDS.slice(42).map(([label, path, placeholder]) => this.renderField(label, path, placeholder))}
         </div>
       </div>
     `;

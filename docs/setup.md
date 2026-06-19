@@ -46,6 +46,56 @@ Clicking a floating node or bottom-bar item opens an in-card detail panel. The d
 | `show_bottom_bar` | `true` | Set to `false` for a cleaner image-only card. |
 | `node_detail` | `minimal` | Use `full` if floating nodes should also show status text. |
 
+## Labels, Node Extras, And Bottom Cards
+
+Every floating node title can be renamed without changing entity IDs:
+
+```yaml
+labels:
+  grid: Grid
+  house: Home
+  solar: Solar
+  ev: EV
+  battery: Battery
+  gridCard: Grid cost
+  evCard: EV
+```
+
+Add one compact extra value to any floating node with `node_info`:
+
+```yaml
+node_info:
+  solar:
+    entity: sensor.solar_efficiency
+  ev:
+    entity: sensor.ev_range
+  battery:
+    entity: sensor.battery_temperature
+```
+
+Choose the bottom glance cards with `bottom_bar`. Built-in card types are `grid`, `cost`, `sun`, `solar`, `house`, `ev`, and `battery`.
+
+```yaml
+bottom_bar:
+  - type: cost
+    label: Grid cost
+  - type: sun
+  - solar
+  - ev
+  - battery
+```
+
+You can also show any sensor:
+
+```yaml
+bottom_bar:
+  - type: entity
+    label: Water
+    status: Today
+    entity: sensor.water_usage_today
+    icon: mdi:water
+```
+
 ## Required Sensors
 
 Only these two sensors are always required:
@@ -130,6 +180,19 @@ detail_entities:
 
 ## Optional Grid And Home Detail Sensors
 
+Grid cost supports either fixed rates or dynamic rate sensors. Dynamic sensors are better for multi-tariff energy providers because the card reads the current import/export tariff directly from Home Assistant.
+
+```yaml
+tariffs:
+  currency: £
+  import_rate: 0.34
+  export_rate: 0.15
+  import_rate_entity: sensor.current_import_rate
+  export_rate_entity: sensor.current_export_rate
+```
+
+The cost card shows the current import cost or export credit per hour based on `entities.grid_power`.
+
 ```yaml
 detail_entities:
   grid:
@@ -142,6 +205,23 @@ detail_entities:
 ```
 
 The card also accepts custom keys under each detail group. Unknown keys are converted into readable labels, so `inverter_temperature` displays as `Inverter Temperature`.
+
+## Optional Detail Panel Actions
+
+Detail panels can show quick action buttons. Actions are Home Assistant service calls, so use entity IDs and services rather than device IDs.
+
+```yaml
+actions:
+  ev:
+    - label: Boost charge
+      service: switch.turn_on
+      target:
+        entity_id: switch.ev_boost
+    - label: Unlock
+      service: lock.unlock
+      target:
+        entity_id: lock.ev
+```
 
 ## Day And Night Image Switching
 
@@ -176,6 +256,28 @@ show_daily_summary: false
 show_bottom_bar: true
 node_detail: minimal
 
+labels:
+  grid: Grid
+  gridCard: Grid cost
+  house: Home
+  solar: Solar
+  ev: EV
+  evCard: EV
+  battery: Battery
+
+tariffs:
+  currency: £
+  import_rate_entity: sensor.current_import_rate
+  export_rate_entity: sensor.current_export_rate
+
+bottom_bar:
+  - type: cost
+    label: Grid cost
+  - type: sun
+  - solar
+  - ev
+  - battery
+
 entities:
   sun: sun.sun
   grid_power: sensor.grid_power_w
@@ -186,6 +288,14 @@ entities:
   ev_power: sensor.ev_charging_power_w
   ev_soc: sensor.ev_state_of_charge
   ev_charging_state: binary_sensor.ev_charging
+
+node_info:
+  solar:
+    entity: sensor.solar_efficiency
+  ev:
+    entity: sensor.ev_range
+  battery:
+    entity: sensor.battery_temperature
 
 energy_today:
   grid: sensor.grid_energy_today

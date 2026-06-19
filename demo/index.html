@@ -105,10 +105,14 @@
         render() {
           const icons = {
             "mdi:transmission-tower": "⌁",
+            "mdi:currency-gbp": "£",
             "mdi:solar-power-variant": "☀",
             "mdi:car-electric": "⚡",
             "mdi:home-battery": "▰",
-            "mdi:home": "⌂"
+            "mdi:home": "⌂",
+            "mdi:weather-sunset": "◐",
+            "mdi:information-outline": "i",
+            "mdi:gesture-tap-button": "◎"
           };
           const glyph = icons[this.getAttribute("icon")] || "•";
           this.shadowRoot || this.attachShadow({ mode: "open" });
@@ -131,7 +135,7 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../energy-home-visual-card.js?v=preview-15");
+      await import("../energy-home-visual-card.js?v=preview-16");
 
       const card = document.querySelector("energy-home-visual-card");
       const evToggle = document.querySelector("#evToggle");
@@ -188,6 +192,27 @@
         show_battery: "input_boolean.has_battery",
         solar_capacity_kw: 5,
         battery_capacity_kwh: 13.5,
+        labels: {
+          grid: "Grid",
+          gridCard: "Grid cost",
+          house: "Home",
+          solar: "Solar",
+          ev: "EV",
+          evCard: "EV",
+          battery: "Battery"
+        },
+        tariffs: {
+          currency: "£",
+          import_rate_entity: "sensor.current_import_rate",
+          export_rate_entity: "sensor.current_export_rate"
+        },
+        bottom_bar: [
+          { type: "cost", label: "Grid cost" },
+          { type: "sun" },
+          "solar",
+          "ev",
+          "battery"
+        ],
         entities: {
           grid_power: "sensor.grid_power_w",
           solar_power: "sensor.solar_power_w",
@@ -197,6 +222,11 @@
           ev_charging_state: "binary_sensor.ev_charging",
           battery_power: "sensor.battery_power_w",
           battery_soc: "sensor.battery_soc"
+        },
+        node_info: {
+          solar: { entity: "sensor.solar_efficiency" },
+          ev: { entity: "sensor.ev_range" },
+          battery: { entity: "sensor.battery_temperature" }
         },
         energy_today: {
           grid: "sensor.grid_energy_today",
@@ -231,6 +261,12 @@
             charge_24h: "sensor.battery_charge_24h",
             discharge_24h: "sensor.battery_discharge_24h"
           }
+        },
+        actions: {
+          ev: [
+            { label: "Boost charge", service: "switch.turn_on", target: { entity_id: "switch.ev_boost" } },
+            { label: "Unlock", service: "lock.unlock", target: { entity_id: "lock.ev" } }
+          ]
         }
       });
 
@@ -263,9 +299,14 @@
             "binary_sensor.ev_charging": sensor(state.showEv && ev > 100 ? "on" : "off"),
             "sensor.battery_power_w": sensor(Math.round(battery)),
             "sensor.battery_soc": sensor(Math.round(batterySoc)),
+            "sensor.current_import_rate": sensor("0.34", { unit_of_measurement: "GBP/kWh" }),
+            "sensor.current_export_rate": sensor("0.15", { unit_of_measurement: "GBP/kWh" }),
             "sensor.grid_energy_today": sensor("7.8"),
             "sensor.solar_energy_today": sensor("22.4"),
             "sensor.home_energy_today": sensor("15.9"),
+            "sensor.solar_efficiency": sensor(Math.round((solar / 5000) * 100), { unit_of_measurement: "%" }),
+            "sensor.ev_range": sensor("168", { unit_of_measurement: "mi" }),
+            "sensor.battery_temperature": sensor("22", { unit_of_measurement: "°C" }),
             "sensor.solar_pv_voltage": sensor("384", { unit_of_measurement: "V" }),
             "sensor.solar_pv_current": sensor("11.9", { unit_of_measurement: "A" }),
             "sensor.solar_energy_week": sensor("118.3", { unit_of_measurement: "kWh" }),
@@ -286,7 +327,10 @@
             "input_boolean.has_ev": sensor(state.showEv ? "on" : "off"),
             "input_boolean.has_solar": sensor(state.showSolar ? "on" : "off"),
             "input_boolean.has_battery": sensor(state.showBattery ? "on" : "off"),
-            "sun.sun": sensor(state.isDay ? "above_horizon" : "below_horizon")
+            "sun.sun": sensor(state.isDay ? "above_horizon" : "below_horizon", {
+              next_setting: new Date(Date.now() + 1000 * 60 * 60 * 4).toISOString(),
+              next_rising: new Date(Date.now() + 1000 * 60 * 60 * 11).toISOString()
+            })
           }
         };
       }

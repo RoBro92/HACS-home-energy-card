@@ -28,15 +28,25 @@ const hass = {
     "sensor.solar_capacity_kw": { state: "5", attributes: { unit_of_measurement: "kW" } },
     "sensor.solar_pv_voltage": { state: "384", attributes: { unit_of_measurement: "V" } },
     "sensor.solar_pv_current": { state: "11.9", attributes: { unit_of_measurement: "A" } },
+    "sensor.solar_efficiency": { state: "91", attributes: { unit_of_measurement: "%" } },
     "sensor.solar_energy_week": { state: "118.3", attributes: { unit_of_measurement: "kWh" } },
     "sensor.solar_energy_month": { state: "432.1", attributes: { unit_of_measurement: "kWh" } },
+    "sensor.grid_voltage": { state: "239", attributes: { unit_of_measurement: "V" } },
+    "sensor.import_rate": { state: "0.34", attributes: { unit_of_measurement: "GBP/kWh" } },
+    "sensor.export_rate": { state: "0.15", attributes: { unit_of_measurement: "GBP/kWh" } },
     "sensor.grid_energy_today": { state: "8.4" },
     "sensor.solar_energy_today": { state: "21.6" },
     "sensor.home_energy_today": { state: "14.2" },
     "input_boolean.has_ev": { state: "on" },
     "input_boolean.has_solar": { state: "on" },
     "input_boolean.has_battery": { state: "off" },
-    "sun.sun": { state: "above_horizon" },
+    "sun.sun": {
+      state: "above_horizon",
+      attributes: {
+        next_setting: "2026-06-19T21:33:00+01:00",
+        next_rising: "2026-06-20T04:42:00+01:00",
+      },
+    },
   },
 };
 
@@ -44,6 +54,69 @@ test("stateValue reads Home Assistant states safely", () => {
   assert.equal(stateValue(hass, "sensor.grid_power_w"), "-1234.4");
   assert.equal(stateValue(hass, "sensor.missing"), "unknown");
   assert.equal(stateValue(null, "sensor.grid_power_w"), "unknown");
+});
+
+test("buildEnergyModel supports configurable labels, node extras, bottom cards, rates, and actions", () => {
+  const model = buildEnergyModel(
+    {
+      labels: {
+        grid: "Mains",
+        house: "Kitchen",
+        solar: "PV",
+        ev: "Car",
+        battery: "Powerwall",
+      },
+      node_info: {
+        grid: { label: "Voltage", entity: "sensor.grid_voltage" },
+        solar: "sensor.solar_efficiency",
+      },
+      tariffs: {
+        currency: "£",
+        import_rate_entity: "sensor.import_rate",
+        export_rate_entity: "sensor.export_rate",
+      },
+      bottom_bar: [
+        { type: "cost", label: "Grid cost" },
+        { type: "sun" },
+        { type: "entity", label: "Voltage", entity: "sensor.grid_voltage", status: "Grid" },
+        "solar",
+      ],
+      actions: {
+        ev: [
+          { label: "Boost charge", service: "switch.turn_on", target: { entity_id: "switch.ev_boost" } },
+        ],
+      },
+      entities: {
+        sun: "sun.sun",
+        grid_power: "sensor.grid_power_w",
+        solar_power: "sensor.solar_power_w",
+        house_power: "sensor.house_power_w",
+      },
+    },
+    hass,
+  );
+
+  assert.equal(model.grid.label, "Mains");
+  assert.equal(model.house.label, "Kitchen");
+  assert.equal(model.solar.label, "PV");
+  assert.equal(model.ev.label, "Car");
+  assert.equal(model.battery.label, "Powerwall");
+  assert.equal(model.grid.nodeExtra, "Voltage 239 V");
+  assert.equal(model.solar.nodeExtra, "91%");
+  assert.equal(model.cost.valueLabel, "-£0.19/h");
+  assert.equal(model.cost.displayStatus, "Export Credit");
+  assert.deepEqual(
+    model.bottomCards.map((card) => [card.kind, card.label, card.status, card.value]),
+    [
+      ["cost", "Grid cost", "Export Credit", "-£0.19/h"],
+      ["sun", "Sunset", "Today", "21:33"],
+      ["entity", "Voltage", "Grid", "239 V"],
+      ["solar", "PV", "Producing", "4.6 kW"],
+    ],
+  );
+  assert.equal(model.actions.ev[0].label, "Boost charge");
+  assert.equal(model.actions.ev[0].domain, "switch");
+  assert.equal(model.actions.ev[0].serviceName, "turn_on");
 });
 
 test("formatPower keeps watts for small values and switches to kW for larger values", () => {
