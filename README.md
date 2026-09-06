@@ -199,6 +199,16 @@ The README is a quick start. Detailed setup is split into focused docs and examp
 
 Solar, EV, and battery cards are dropped automatically when that system is switched off. The legacy `grid`, `solar`, `house`, `ev`, `battery`, and `cost` types still work but duplicate the node values.
 
+## Development
+
+```sh
+npm ci
+npm run build   # bundles lit into dist/HACS-home-energy-card.js and copies the backgrounds
+npm run check   # syntax check and unit tests
+```
+
+The source module imports lit as a bare specifier and is bundled by esbuild, so `dist/` is what HACS serves and what `demo/index.html` loads. Commit `dist/` with each release.
+
 ## Card Mod Variables
 
 ```yaml

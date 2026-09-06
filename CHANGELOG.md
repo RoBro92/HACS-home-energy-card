@@ -19,6 +19,7 @@ Focus release: fewer options, a smoother first run, and glance cards that put th
 - Removes the title, subtitle, and daily summary strip and the `show_title`, `show_daily_summary`, `title`, `subtitle`, and `node_detail` options. Nodes always show their direction line and the summary values live in the glance bar and detail panels.
 - Removes undocumented camelCase and alias config keys, `bottom_bar_limit`, and the animated flow model that was no longer rendered. Documented aliases `backgrounds.no_ev`, `backgrounds.no_solar_battery`, `background_full`, and `background_no_ev` still work.
 - Removes the `/local/energy-bg-*.jpg` fallback. Missing background keys now fall back to the bundled images.
+- Bundles lit into `dist/HACS-home-energy-card.js` at build time. The card no longer fetches lit from a CDN when it loads, so it works on installs without internet access. `npm ci` is now required before `npm run build`.
 - Drops `time_of_day` from the stub config so a card added from the picker follows the sun instead of being locked to day.
 
 

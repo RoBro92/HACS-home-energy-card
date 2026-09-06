@@ -6,6 +6,7 @@ Before publishing a GitHub release for HACS:
 - Add GitHub topics: `home-assistant`, `hacs`, `lovelace`, `dashboard`, `custom-card`, `energy`, `solar`, `battery`, and `ev`.
 - Confirm issues and discussions are enabled.
 - Confirm the repository is `RoBro92/HACS-home-energy-card`.
+- Run `npm ci`.
 - Run `npm run build`.
 - Run `npm run check`.
 - Confirm the HACS workflow passes.

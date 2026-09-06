@@ -1,5 +1,4 @@
-const litRuntime = await resolveLitRuntime();
-const { LitElement, html, css } = litRuntime;
+import { LitElement, html, css } from "lit";
 
 const MODULE_BASE_URL = new URL(".", import.meta.url);
 const ACTIVE_THRESHOLD_W = 25;
@@ -41,20 +40,6 @@ const BACKGROUND_ALIASES = {
   solar_battery: ["solar_battery", "no_ev"],
   ev_only: ["ev_only", "no_solar_battery"],
 };
-
-async function resolveLitRuntime() {
-  if (typeof window !== "undefined" && window.LitElement && window.html && window.css) {
-    return { LitElement: window.LitElement, html: window.html, css: window.css };
-  }
-
-  if (typeof window !== "undefined") {
-    return import("https://cdn.jsdelivr.net/npm/lit@3/+esm");
-  }
-
-  const passthrough = (strings, ...values) =>
-    strings.reduce((result, part, index) => `${result}${part}${values[index] ?? ""}`, "");
-  return { LitElement: class {}, html: passthrough, css: passthrough };
-}
 
 // ---------------------------------------------------------------------------
 // State helpers and formatting

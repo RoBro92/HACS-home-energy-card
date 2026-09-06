@@ -34,5 +34,9 @@
   "bugs": {
     "url": "https://github.com/RoBro92/HACS-home-energy-card/issues"
   },
-  "homepage": "https://github.com/RoBro92/HACS-home-energy-card#readme"
+  "homepage": "https://github.com/RoBro92/HACS-home-energy-card#readme",
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "lit": "^3.3.3"
+  }
 }

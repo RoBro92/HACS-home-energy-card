@@ -81,12 +81,7 @@
     </div>
 
     <script type="module">
-      import { LitElement, html, css } from "https://cdn.jsdelivr.net/npm/lit@3/+esm";
-
-      window.LitElement = LitElement;
-      window.html = html;
-      window.css = css;
-
+      // The demo uses the built bundle so lit is inlined. Run `npm run build` first.
       class HaCard extends HTMLElement {}
 
       class HaIcon extends HTMLElement {
@@ -150,7 +145,7 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../hacs-home-energy-card.js?v=preview-21");
+      await import("../dist/HACS-home-energy-card.js?v=preview-22");
 
       const card = document.querySelector("hacs-home-energy-card");
       const evToggle = document.querySelector("#evToggle");
