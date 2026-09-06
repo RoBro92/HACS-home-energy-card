@@ -5,27 +5,33 @@ show_ev: input_boolean.has_ev
 show_solar: input_boolean.has_solar
 show_battery: input_boolean.has_battery
 
-# Layout and sizing.
+# Capacities feed the solar efficiency and battery reserve figures.
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
-show_title: false
-show_daily_summary: false
-show_bottom_bar: true
-node_detail: minimal
-card_width: 900
-card_height: 506
-min_width: 320
-min_height: 180
 
-# Floating node and panel names.
-labels:
-  grid: Grid
-  gridCard: Grid cost
-  house: Home
-  solar: Solar
-  ev: EV
-  evCard: EV
-  battery: Battery
+# Live sensors.
+entities:
+  sun: sun.sun
+  weather: weather.home
+  outdoor_temperature: sensor.outdoor_temperature
+  grid_power: sensor.grid_power_w
+  house_power: sensor.house_consumption_w
+  solar_power: sensor.solar_power_w
+  battery_power: sensor.battery_power_w
+  battery_soc: sensor.battery_soc
+  ev_power: sensor.ev_charging_power_w
+  ev_soc: sensor.ev_state_of_charge
+  ev_charging_state: binary_sensor.ev_charging
+
+# Daily totals for the glance cards and detail panels.
+energy_today:
+  grid_import: sensor.grid_import_today
+  grid_export: sensor.grid_export_today
+  home: sensor.home_energy_today
+  solar: sensor.solar_energy_today
+  ev: sensor.ev_energy_today
+  battery_charge: sensor.battery_charge_today
+  battery_discharge: sensor.battery_discharge_today
 
 # Cost calculation.
 tariffs:
@@ -37,7 +43,7 @@ costs:
   today_entity: sensor.energy_cost_today
   daily_budget: 5
 
-# Bottom glance cards.
+# Bottom glance cards, up to five.
 bottom_bar:
   - type: cost_today
   - type: self_powered_today
@@ -45,64 +51,34 @@ bottom_bar:
   - type: battery_reserve
   - type: weather
 
-# Main energy sensors.
-entities:
-  sun: sun.sun
-  weather: weather.home
-  outdoor_temperature: sensor.outdoor_temperature
-  grid_power: sensor.grid_power_w
-  solar_power: sensor.solar_power_w
-  house_power: sensor.house_consumption_w
-  ev_power: sensor.ev_charging_power_w
-  ev_soc: sensor.ev_state_of_charge
-  ev_charging_state: binary_sensor.ev_charging
-  battery_power: sensor.battery_power_w
-  battery_soc: sensor.battery_soc
-
-# Optional compact values shown on floating nodes.
+# Optional compact values shown on the nodes.
 node_info:
   solar:
-    entity: sensor.solar_efficiency
+    entity: sensor.inverter_temperature
   ev:
     entity: sensor.ev_range
   battery:
     entity: sensor.battery_temperature
 
-energy_today:
-  grid: sensor.grid_energy_today
-  grid_import: sensor.grid_import_today
-  grid_export: sensor.grid_export_today
-  solar: sensor.solar_energy_today
-  home: sensor.home_energy_today
-  battery_discharge: sensor.battery_discharge_today
-
-# Popup detail rows and simple controls. Sensors render as rows.
-# Locks, switches, buttons, and input buttons render as circular controls.
+# Detail panel rows and controls. A plain list uses entity names;
+# keyed entries set a custom label or icon.
 detail_entities:
   solar:
-    pv_voltage: sensor.solar_pv_voltage
-    pv_current: sensor.solar_pv_current
-    energy_week: sensor.solar_energy_week
-    energy_month: sensor.solar_energy_month
+    - sensor.solar_pv_voltage
+    - sensor.solar_pv_current
+    - sensor.solar_energy_week
   grid:
-    import_24h: sensor.grid_import_24h
-    export_24h: sensor.grid_export_24h
+    - sensor.grid_voltage
   house:
-    energy_24h: sensor.home_energy_24h
+    - sensor.home_energy_week
   ev:
     range: sensor.ev_range
-    inside_temperature: sensor.ev_inside_temperature
     odometer: sensor.ev_odometer
-    energy_24h: sensor.ev_energy_24h
-    voltage: sensor.ev_voltage
-    current: sensor.ev_current
     lock: lock.ev
     boost:
       label: Boost
       entity: switch.ev_boost
       icon: mdi:flash
   battery:
-    voltage: sensor.battery_voltage
-    current: sensor.battery_current
-    charge_24h: sensor.battery_charge_24h
-    discharge_24h: sensor.battery_discharge_24h
+    - sensor.battery_voltage
+    - sensor.battery_temperature

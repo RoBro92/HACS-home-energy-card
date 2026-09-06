@@ -4,21 +4,23 @@ show_solar: true
 show_battery: true
 solar_capacity_kw: 5
 battery_capacity_kwh: 13.5
-show_title: false
-show_daily_summary: false
-show_bottom_bar: true
-node_detail: minimal
-card_width: 900
-card_height: 506
-min_width: 320
-min_height: 180
 
-labels:
-  grid: Grid
-  gridCard: Grid cost
-  house: Home
-  solar: Solar
-  battery: Battery
+entities:
+  sun: sun.sun
+  weather: weather.home
+  grid_power: sensor.grid_power_w
+  house_power: sensor.house_consumption_w
+  solar_power: sensor.solar_power_w
+  battery_power: sensor.battery_power_w
+  battery_soc: sensor.battery_soc
+
+energy_today:
+  grid_import: sensor.grid_import_today
+  grid_export: sensor.grid_export_today
+  home: sensor.home_energy_today
+  solar: sensor.solar_energy_today
+  battery_charge: sensor.battery_charge_today
+  battery_discharge: sensor.battery_discharge_today
 
 tariffs:
   currency: £
@@ -32,42 +34,15 @@ costs:
 bottom_bar:
   - type: cost_today
   - type: self_powered_today
-  - type: grid_import_export
+  - type: solar_today
   - type: battery_reserve
   - type: weather
 
-entities:
-  sun: sun.sun
-  weather: weather.home
-  outdoor_temperature: sensor.outdoor_temperature
-  grid_power: sensor.grid_power_w
-  solar_power: sensor.solar_power_w
-  house_power: sensor.house_consumption_w
-  battery_power: sensor.battery_power_w
-  battery_soc: sensor.battery_soc
-
-node_info:
-  solar:
-    entity: sensor.solar_efficiency
-  battery:
-    entity: sensor.battery_temperature
-
-energy_today:
-  grid: sensor.grid_energy_today
-  grid_import: sensor.grid_import_today
-  grid_export: sensor.grid_export_today
-  solar: sensor.solar_energy_today
-  home: sensor.home_energy_today
-  battery_discharge: sensor.battery_discharge_today
-
 detail_entities:
   solar:
-    pv_voltage: sensor.solar_pv_voltage
-    pv_current: sensor.solar_pv_current
-    energy_week: sensor.solar_energy_week
-    energy_month: sensor.solar_energy_month
+    - sensor.solar_pv_voltage
+    - sensor.solar_pv_current
+    - sensor.solar_energy_week
   battery:
-    voltage: sensor.battery_voltage
-    current: sensor.battery_current
-    charge_24h: sensor.battery_charge_24h
-    discharge_24h: sensor.battery_discharge_24h
+    - sensor.battery_voltage
+    - sensor.battery_temperature
