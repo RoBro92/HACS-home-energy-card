@@ -15,4 +15,6 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build
+      - name: Committed dist must match the source
+        run: git diff --exit-code -- dist/ || (echo "dist/ is stale. Run npm run build and commit the result." && exit 1)
       - run: npm run check

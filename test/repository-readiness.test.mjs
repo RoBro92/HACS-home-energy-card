@@ -68,6 +68,17 @@ test("card picker metadata enables a visual community card entry", () => {
   assert.match(source, /HACS Home Energy Card/);
 });
 
+test("release workflow publishes from the tagged tree without HACS-breaking assets", () => {
+  const workflow = read(".github/workflows/release.yml");
+  const validate = read(".github/workflows/validate.yml");
+
+  assert.match(workflow, /tags: \["v\*"\]/);
+  assert.match(workflow, /git diff --exit-code -- dist\//);
+  assert.match(workflow, /release-notes\.mjs/);
+  assert.doesNotMatch(workflow, /files:/, "no release assets, HACS must read dist/ from the tag");
+  assert.match(validate, /git diff --exit-code -- dist\//);
+});
+
 test("dist bundle inlines lit and has no CDN or bare imports", () => {
   const bundle = read("dist/HACS-home-energy-card.js");
   const source = read("hacs-home-energy-card.js");
@@ -78,6 +89,8 @@ test("dist bundle inlines lit and has no CDN or bare imports", () => {
   assert.doesNotMatch(bundle, /from\s*["']lit["']/);
   assert.doesNotMatch(bundle, /import\s*\(/, "no dynamic imports remain");
   assert.match(bundle, /customCards/);
+  assert.match(bundle, new RegExp(JSON.parse(read("package.json")).version.replace(/\./g, "\\.")), "bundle carries the package version");
+  assert.doesNotMatch(bundle, /__CARD_VERSION__/);
 });
 
 test("release package still contains bundled backgrounds beside the card module", () => {

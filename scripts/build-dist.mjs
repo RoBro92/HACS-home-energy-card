@@ -1,6 +1,9 @@
 import { copyFile, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { readFile } from "node:fs/promises";
 import { build } from "esbuild";
+
+const { version } = JSON.parse(await readFile("package.json", "utf8"));
 
 const distDir = "dist";
 const assetsDir = "demo/assets";
@@ -35,6 +38,7 @@ await build({
   format: "esm",
   target: ["es2022"],
   minify: true,
+  define: { __CARD_VERSION__: JSON.stringify(version) },
   legalComments: "inline",
   logLevel: "warning",
 });

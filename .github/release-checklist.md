@@ -1,23 +1,23 @@
 # Release Checklist
 
-Before publishing a GitHub release for HACS:
+Releases are published by the Release workflow when a `v*` tag is pushed. The tag must match `package.json`.
 
-- Set the GitHub repository description to: `Cinematic Home Assistant dashboard card for solar, grid, EV, battery, cost, and weather energy monitoring.`
-- Add GitHub topics: `home-assistant`, `hacs`, `lovelace`, `dashboard`, `custom-card`, `energy`, `solar`, `battery`, and `ev`.
-- Confirm issues and discussions are enabled.
-- Confirm the repository is `RoBro92/HACS-home-energy-card`.
-- Run `npm ci`.
-- Run `npm run build`.
-- Run `npm run check`.
-- Confirm the HACS workflow passes.
-- Commit the generated `dist/` folder.
-- Create a GitHub release with a version tag, for example `v1.1.0`.
-- Add `RoBro92/HACS-home-energy-card` to HACS as a custom Dashboard repository.
+1. Bump `version` in `package.json` and add a `## <version>` section to `CHANGELOG.md`.
+2. Run `npm ci`, `npm run build`, and `npm run check`. Commit the regenerated `dist/`.
+3. Merge to `main` and confirm the Validate and HACS workflows pass.
+4. Tag and push:
 
-Before submitting to default HACS:
+```sh
+git tag v1.1.0
+git push origin v1.1.0
+```
 
-- Confirm at least a few public testers have installed the latest release.
-- Confirm the resource path is `/hacsfiles/HACS-home-energy-card/HACS-home-energy-card.js`.
-- Confirm bundled backgrounds load on a clean install.
-- Keep the README and `info.md` focused on install, preview, and setup.
-- If HACS review requests brand metadata, use `docs/images/hacs-home-energy-card-logo.svg` as the source artwork.
+The workflow rebuilds, checks that the committed `dist/` matches the tag, and creates the GitHub release with the matching changelog section as its notes. Do not attach a `.js` asset to the release: HACS would then download only that file and skip the bundled backgrounds. HACS reads `dist/` from the tagged tree.
+
+## How HACS picks this up
+
+- `hacs.json` names `HACS-home-energy-card.js`. HACS finds it under `dist/` at the newest release tag and downloads every file in that folder.
+- The dashboard resource is `/hacsfiles/HACS-home-energy-card/HACS-home-energy-card.js`.
+- HACS renders `info.md` on the repository page. The README is for GitHub.
+
+Before submitting to default HACS: confirm a few public testers have installed the latest release on a clean install, and keep `info.md` focused on install and setup.

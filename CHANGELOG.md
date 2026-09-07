@@ -20,6 +20,9 @@ Focus release: fewer options, a smoother first run, and glance cards that put th
 - Removes undocumented camelCase and alias config keys, `bottom_bar_limit`, and the animated flow model that was no longer rendered. Documented aliases `backgrounds.no_ev`, `backgrounds.no_solar_battery`, `background_full`, and `background_no_ev` still work.
 - Removes the `/local/energy-bg-*.jpg` fallback. Missing background keys now fall back to the bundled images.
 - Bundles lit into `dist/HACS-home-energy-card.js` at build time. The card no longer fetches lit from a CDN when it loads, so it works on installs without internet access. `npm ci` is now required before `npm run build`.
+- Adds a Release workflow: pushing a matching `v*` tag builds, verifies the committed `dist/`, and publishes the GitHub release with the changelog section as notes. The validate workflow now fails when `dist/` is stale.
+- Logs the card version to the browser console on load, so support reports can name the installed release.
+- Trims the README to install, preview, quick start, and links; the full option reference lives in the setup guide.
 - Drops `time_of_day` from the stub config so a card added from the picker follows the sun instead of being locked to day.
 
 

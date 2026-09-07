@@ -4,7 +4,7 @@
   <img src="docs/images/hacs-home-energy-card-logo.png" alt="HACS Home Energy Card logo" width="120">
 </p>
 
-HACS Home Energy Card is a Home Assistant dashboard card for cinematic home energy monitoring. It shows grid import and export, solar production, home load, EV charging, battery state, day and night backgrounds, detail panels, and configurable bottom glance cards.
+A cinematic Home Assistant dashboard card for home energy. Live grid, solar, home, battery, and EV power float over a day or night scene, with energy glance cards along the bottom and tap-to-open detail panels.
 
 ![HACS Home Energy Card daytime full setup preview](docs/images/card-day.png)
 
@@ -16,11 +16,11 @@ Add this repository to HACS as a custom Dashboard repository:
 https://github.com/RoBro92/HACS-home-energy-card
 ```
 
-The Lovelace resource should be:
+The dashboard resource should be:
 
 ```yaml
 url: /hacsfiles/HACS-home-energy-card/HACS-home-energy-card.js
 type: module
 ```
 
-Start with `entities.grid_power` and `entities.house_power`, then add solar, EV, and battery sensors when available. See `docs/setup.md` for the full configuration guide.
+Only grid power and home power are required. Add the card, pick those two sensors in the editor, then switch on solar, battery, and EV as you have them. See `docs/setup.md` for every option.

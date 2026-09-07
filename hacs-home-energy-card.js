@@ -10,6 +10,8 @@ const MAX_BOTTOM_CARDS = 5;
 const SCENE_FADE_MS = 1400;
 const DEFAULT_CURRENCY = "£";
 const SYSTEM_GROUPS = ["grid", "solar", "house", "ev", "battery"];
+// Replaced by scripts/build-dist.mjs with the package.json version.
+const CARD_VERSION = typeof __CARD_VERSION__ === "string" ? __CARD_VERSION__ : "dev";
 
 function moduleAsset(path) {
   return new URL(path, MODULE_BASE_URL).href;
@@ -2365,6 +2367,7 @@ if (typeof customElements !== "undefined" && !customElements.get("hacs-home-ener
 }
 
 if (typeof window !== "undefined") {
+  console.info(`%c HACS Home Energy Card %c v${CARD_VERSION} `, "color: #07101a; background: #58d5ff; font-weight: 700", "color: #58d5ff; background: #07101a");
   window.customCards = window.customCards || [];
   const cardPickerEntry = {
     type: "hacs-home-energy-card",
