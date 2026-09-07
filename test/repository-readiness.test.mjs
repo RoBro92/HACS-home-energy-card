@@ -68,6 +68,18 @@ test("card picker metadata enables a visual community card entry", () => {
   assert.match(source, /HACS Home Energy Card/);
 });
 
+test("dist bundle inlines lit and has no CDN or bare imports", () => {
+  const bundle = read("dist/HACS-home-energy-card.js");
+  const source = read("hacs-home-energy-card.js");
+
+  assert.match(source, /^import \{ LitElement, html, css \} from "lit";/m);
+  assert.doesNotMatch(source, /cdn\.jsdelivr\.net/);
+  assert.doesNotMatch(bundle, /cdn\.jsdelivr\.net/);
+  assert.doesNotMatch(bundle, /from\s*["']lit["']/);
+  assert.doesNotMatch(bundle, /import\s*\(/, "no dynamic imports remain");
+  assert.match(bundle, /customCards/);
+});
+
 test("release package still contains bundled backgrounds beside the card module", () => {
   const expectedDistFiles = [
     "dist/HACS-home-energy-card.js",

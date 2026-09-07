@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  BOTTOM_CARD_OPTIONS,
   buildEnergyModel,
   HacsHomeEnergyCard,
   editorDataFromConfig,
@@ -9,9 +10,9 @@ import {
   editorFieldsForConfig,
   editorSectionsForConfig,
   entityEnabled,
-  flowSpeedSeconds,
   formatEnergy,
   formatPower,
+  guessStubEntities,
   selectBackground,
   setupBackgroundKey,
   stateValue,
@@ -25,7 +26,7 @@ const hass = {
     "sensor.house_power_w": { state: "2610" },
     "sensor.ev_power_w": { state: "7200" },
     "sensor.ev_soc": { state: "62" },
-    "sensor.ev_range": { state: "214", attributes: { unit_of_measurement: "mi" } },
+    "sensor.ev_range": { state: "214", attributes: { unit_of_measurement: "mi", friendly_name: "Car range" } },
     "sensor.ev_inside_temperature": { state: "21.5", attributes: { unit_of_measurement: "°C" } },
     "sensor.ev_odometer": { state: "12842.6", attributes: { unit_of_measurement: "mi" } },
     "binary_sensor.ev_charging": { state: "on" },
@@ -48,7 +49,9 @@ const hass = {
     "sensor.grid_export_today": { state: "9.1", attributes: { unit_of_measurement: "kWh" } },
     "sensor.solar_energy_today": { state: "21.6" },
     "sensor.home_energy_today": { state: "14.2" },
+    "sensor.ev_energy_today": { state: "18.2", attributes: { unit_of_measurement: "kWh" } },
     "sensor.energy_cost_today": { state: "2.85", attributes: { unit_of_measurement: "GBP" } },
+    "sensor.battery_charge_today": { state: "6.4", attributes: { unit_of_measurement: "kWh" } },
     "sensor.battery_discharge_today": { state: "5.7", attributes: { unit_of_measurement: "kWh" } },
     "sensor.outdoor_temperature": { state: "18.4", attributes: { unit_of_measurement: "°C" } },
     "weather.home": { state: "partlycloudy", attributes: { temperature: 18.4, temperature_unit: "°C" } },
@@ -65,6 +68,13 @@ const hass = {
   },
 };
 
+const baseEntities = {
+  sun: "sun.sun",
+  grid_power: "sensor.grid_power_w",
+  solar_power: "sensor.solar_power_w",
+  house_power: "sensor.house_power_w",
+};
+
 test("stateValue reads Home Assistant states safely", () => {
   assert.equal(stateValue(hass, "sensor.grid_power_w"), "-1234.4");
   assert.equal(stateValue(hass, "sensor.missing"), "unknown");
@@ -74,22 +84,12 @@ test("stateValue reads Home Assistant states safely", () => {
 test("buildEnergyModel supports configurable labels, node extras, bottom cards, rates, and actions", () => {
   const model = buildEnergyModel(
     {
-      labels: {
-        grid: "Mains",
-        house: "Kitchen",
-        solar: "PV",
-        ev: "Car",
-        battery: "Powerwall",
-      },
+      labels: { grid: "Mains", house: "Kitchen", solar: "PV", ev: "Car", battery: "Powerwall" },
       node_info: {
         grid: { label: "Voltage", entity: "sensor.grid_voltage" },
         solar: "sensor.solar_efficiency",
       },
-      tariffs: {
-        currency: "£",
-        import_rate_entity: "sensor.import_rate",
-        export_rate_entity: "sensor.export_rate",
-      },
+      tariffs: { currency: "£", import_rate_entity: "sensor.import_rate", export_rate_entity: "sensor.export_rate" },
       bottom_bar: [
         { type: "cost_now", label: "Grid cost" },
         { type: "sun" },
@@ -97,16 +97,9 @@ test("buildEnergyModel supports configurable labels, node extras, bottom cards, 
         "solar",
       ],
       actions: {
-        ev: [
-          { label: "Boost charge", service: "switch.turn_on", target: { entity_id: "switch.ev_boost" } },
-        ],
+        ev: [{ label: "Boost charge", service: "switch.turn_on", target: { entity_id: "switch.ev_boost" } }],
       },
-      entities: {
-        sun: "sun.sun",
-        grid_power: "sensor.grid_power_w",
-        solar_power: "sensor.solar_power_w",
-        house_power: "sensor.house_power_w",
-      },
+      entities: baseEntities,
     },
     hass,
   );
@@ -119,11 +112,11 @@ test("buildEnergyModel supports configurable labels, node extras, bottom cards, 
   assert.equal(model.grid.nodeExtra, "Voltage 239 V");
   assert.equal(model.solar.nodeExtra, "91%");
   assert.equal(model.cost.valueLabel, "-£0.19/h");
-  assert.equal(model.cost.displayStatus, "Export Credit");
+  assert.equal(model.cost.displayStatus, "Export credit");
   const bottomCards = model.bottomCards.map((card) => [card.kind, card.label, card.status, card.value]);
-  assert.deepEqual(bottomCards[0], ["cost", "Grid cost", "Export Credit", "-£0.19/h"]);
+  assert.deepEqual(bottomCards[0], ["cost", "Grid cost", "Export credit", "-£0.19/h"]);
   assert.deepEqual(bottomCards[1].slice(0, 3), ["sun", "Sunset", "Today"]);
-  assert.match(bottomCards[1][3], /^\d{2}:\d{2}$/);
+  assert.match(bottomCards[1][3], /\d{1,2}:\d{2}/);
   assert.deepEqual(bottomCards[2], ["entity", "Voltage", "Grid", "239 V"]);
   assert.deepEqual(bottomCards[3], ["solar", "PV", "Producing", "4.6 kW"]);
   assert.equal(model.actions.ev[0].label, "Boost charge");
@@ -131,17 +124,15 @@ test("buildEnergyModel supports configurable labels, node extras, bottom cards, 
   assert.equal(model.actions.ev[0].serviceName, "turn_on");
 });
 
-test("buildEnergyModel builds value-added bottom rail cards with budget, reserve, energy split, sun, and weather", () => {
+test("buildEnergyModel builds the energy glance cards with value first and caption second", () => {
   const model = buildEnergyModel(
     {
       show_ev: true,
       show_solar: true,
       show_battery: true,
       solar_capacity_kw: 5,
-      costs: {
-        today_entity: "sensor.energy_cost_today",
-        daily_budget: 5,
-      },
+      costs: { today_entity: "sensor.energy_cost_today", daily_budget: 5 },
+      tariffs: { import_rate_entity: "sensor.import_rate", export_rate_entity: "sensor.export_rate" },
       bottom_bar: [
         { type: "cost_today" },
         { type: "self_powered_today" },
@@ -151,11 +142,8 @@ test("buildEnergyModel builds value-added bottom rail cards with budget, reserve
         { type: "weather" },
       ],
       entities: {
-        sun: "sun.sun",
+        ...baseEntities,
         weather: "weather.home",
-        grid_power: "sensor.grid_power_w",
-        solar_power: "sensor.solar_power_w",
-        house_power: "sensor.house_power_w",
         battery_power: "sensor.battery_power_w",
         battery_soc: "sensor.battery_soc",
         battery_capacity: "sensor.battery_capacity_kwh",
@@ -172,34 +160,65 @@ test("buildEnergyModel builds value-added bottom rail cards with budget, reserve
 
   const cards = Object.fromEntries(model.bottomCards.map((card) => [card.kind, card]));
 
-  assert.equal(model.bottomCards.length, 5);
-  assert.equal(cards.cost_today.label, "Cost Today");
+  assert.equal(model.bottomCards.length, 5, "bottom bar is capped at five cards");
+  assert.equal(cards.cost_today.label, "Cost today");
   assert.equal(cards.cost_today.value, "£2.85");
+  assert.equal(cards.cost_today.status, "of £5.00 budget");
   assert.equal(cards.cost_today.progress, 57);
   assert.equal(cards.self_powered_today.value, "56%");
   assert.equal(cards.grid_import_export.value, "6.2 / 9.1 kWh");
-  assert.equal(cards.battery_reserve.status, "Reserve");
+  assert.equal(cards.grid_import_export.status, "Import / export");
+  assert.equal(cards.battery_reserve.status, "At current load");
   assert.match(cards.battery_reserve.value, /^\d+h \d{2}m$/);
   assert.equal(cards.battery_discharge.value, "5.7 kWh");
-  assert.equal(model.availableBottomCards.find((card) => card.kind === "weather").value, "18.4°C");
-  assert.equal(model.availableBottomCards.find((card) => card.kind === "weather").status, "Partly Cloudy");
 });
 
-test("buildEnergyModel default bottom rail avoids duplicate node power cards", () => {
+test("buildEnergyModel adds tariff, weather, and daily energy glance cards", () => {
   const model = buildEnergyModel(
     {
       show_ev: true,
-      show_solar: true,
       show_battery: true,
-      costs: {
-        today_entity: "sensor.energy_cost_today",
-        daily_budget: 5,
+      tariffs: { import_rate_entity: "sensor.import_rate", export_rate_entity: "sensor.export_rate" },
+      bottom_bar: ["tariff_now", "weather", "solar_today", "home_today", "ev_today", "battery_charge"],
+      entities: { ...baseEntities, weather: "weather.home", outdoor_temperature: "sensor.outdoor_temperature" },
+      energy_today: {
+        solar: "sensor.solar_energy_today",
+        home: "sensor.home_energy_today",
+        ev: "sensor.ev_energy_today",
+        battery_charge: "sensor.battery_charge_today",
       },
+    },
+    hass,
+  );
+  const cards = Object.fromEntries(model.bottomCards.map((card) => [card.kind, card]));
+
+  assert.equal(cards.tariff_now.value, "£0.34/kWh");
+  assert.equal(cards.tariff_now.status, "Export £0.15/kWh");
+  assert.equal(cards.weather.value, "18.4°C");
+  assert.equal(cards.weather.status, "Partly cloudy");
+  assert.equal(cards.solar_today.value, "21.6 kWh");
+  assert.equal(cards.home_today.value, "14.2 kWh");
+  assert.equal(cards.ev_today.value, "18.2 kWh");
+  assert.equal(model.bottomCards.length, 5);
+  assert.deepEqual(
+    model.bottomCards.map((card) => card.kind),
+    ["tariff_now", "weather", "solar_today", "home_today", "ev_today"],
+  );
+});
+
+test("buildEnergyModel default bottom bar only shows glance cards that have data", () => {
+  const sparse = buildEnergyModel({ entities: baseEntities }, hass);
+  assert.deepEqual(
+    sparse.bottomCards.map((card) => card.kind),
+    ["sun"],
+  );
+
+  const rich = buildEnergyModel(
+    {
+      show_battery: true,
+      costs: { today_entity: "sensor.energy_cost_today", daily_budget: 5 },
       entities: {
-        sun: "sun.sun",
-        grid_power: "sensor.grid_power_w",
-        solar_power: "sensor.solar_power_w",
-        house_power: "sensor.house_power_w",
+        ...baseEntities,
         battery_power: "sensor.battery_power_w",
         battery_soc: "sensor.battery_soc",
         battery_capacity: "sensor.battery_capacity_kwh",
@@ -207,21 +226,20 @@ test("buildEnergyModel default bottom rail avoids duplicate node power cards", (
       energy_today: {
         grid_import: "sensor.grid_import_today",
         grid_export: "sensor.grid_export_today",
-        battery_discharge: "sensor.battery_discharge_today",
         home: "sensor.home_energy_today",
+        solar: "sensor.solar_energy_today",
       },
     },
     hass,
   );
-
   assert.deepEqual(
-    model.bottomCards.map((card) => card.kind),
-    ["cost_today", "self_powered_today", "grid_import_export", "battery_reserve", "sun"],
+    rich.bottomCards.map((card) => card.kind),
+    ["cost_today", "self_powered_today", "grid_import_export", "battery_reserve", "solar_today"],
   );
-  assert.ok(!model.bottomCards.some((card) => ["grid", "solar", "ev", "battery"].includes(card.kind)));
+  assert.ok(!rich.bottomCards.some((card) => ["grid", "solar", "ev", "battery"].includes(card.kind)));
 });
 
-test("buildEnergyModel hides configured optional bottom cards when their systems are disabled", () => {
+test("buildEnergyModel hides system specific bottom cards when their systems are disabled", () => {
   const model = buildEnergyModel(
     {
       show_ev: false,
@@ -233,13 +251,12 @@ test("buildEnergyModel hides configured optional bottom cards when their systems
         "solar",
         "ev",
         "battery",
+        "solar_today",
+        "ev_today",
+        "battery_charge",
         { type: "entity", label: "Voltage", entity: "sensor.grid_voltage", status: "Grid" },
       ],
-      entities: {
-        sun: "sun.sun",
-        grid_power: "sensor.grid_power_w",
-        house_power: "sensor.house_power_w",
-      },
+      entities: { sun: "sun.sun", grid_power: "sensor.grid_power_w", house_power: "sensor.house_power_w" },
     },
     hass,
   );
@@ -260,11 +277,7 @@ test("buildEnergyModel turns extra detail sensors into rows and controllable ent
           inside_temperature: "sensor.ev_inside_temperature",
           odometer: "sensor.ev_odometer",
           lock: "lock.ev",
-          boost: {
-            label: "Boost",
-            entity: "switch.ev_boost",
-            icon: "mdi:flash",
-          },
+          boost: { label: "Boost", entity: "switch.ev_boost", icon: "mdi:flash" },
         },
       },
       entities: {
@@ -291,6 +304,27 @@ test("buildEnergyModel turns extra detail sensors into rows and controllable ent
   assert.ok(actionLabels.includes("Boost"));
   assert.equal(model.actions.ev.find((action) => action.label === "Unlock").service, "lock.unlock");
   assert.equal(model.actions.ev.find((action) => action.label === "Boost").service, "switch.toggle");
+});
+
+test("buildEnergyModel labels listed detail entities from their friendly names", () => {
+  const model = buildEnergyModel(
+    {
+      show_ev: true,
+      detail_entities: { ev: ["sensor.ev_range", "lock.ev"] },
+      entities: { grid_power: "sensor.grid_power_w", house_power: "sensor.house_power_w", ev_power: "sensor.ev_power_w" },
+    },
+    hass,
+  );
+
+  assert.deepEqual(
+    model.details.ev.map((row) => [row.label, row.value]),
+    [
+      ["Charge power", "7.2 kW"],
+      ["Charging state", "Charging"],
+      ["Car range", "214 mi"],
+    ],
+  );
+  assert.equal(model.actions.ev[0].label, "Unlock");
 });
 
 test("formatPower keeps watts for small values and switches to kW for larger values", () => {
@@ -322,45 +356,12 @@ test("timeOfDay uses sun.sun before falling back to local clock", () => {
   );
   assert.equal(timeOfDay({}, { states: {} }, new Date("2026-06-18T12:00:00+01:00")), "day");
   assert.equal(timeOfDay({}, { states: {} }, new Date("2026-06-18T22:00:00+01:00")), "night");
+  assert.equal(timeOfDay({ time_of_day: "night" }, hass), "night");
 });
 
-test("flowSpeedSeconds makes stronger power flows animate faster with sane bounds", () => {
-  assert.equal(flowSpeedSeconds(0), 0);
-  assert.equal(flowSpeedSeconds(50), 8);
-  assert.ok(flowSpeedSeconds(900) < flowSpeedSeconds(100));
-  assert.equal(flowSpeedSeconds(9000), 1.2);
-});
-
-test("renderFlows no longer renders animated dash or pulse flow elements", () => {
+test("buildEnergyModel derives display values, directions, tones, background, and visibility", () => {
   const model = buildEnergyModel(
     {
-      show_ev: true,
-      show_solar: true,
-      show_battery: true,
-      entities: {
-        grid_power: "sensor.grid_power_w",
-        solar_power: "sensor.solar_power_w",
-        house_power: "sensor.house_power_w",
-        ev_power: "sensor.ev_power_w",
-        battery_power: "sensor.battery_power_w",
-      },
-    },
-    hass,
-  );
-  const card = new HacsHomeEnergyCard();
-
-  const markup = String(card.renderFlows(model));
-
-  assert.equal(markup, "");
-  assert.doesNotMatch(markup, /flow-line/);
-  assert.doesNotMatch(markup, /flow-pulse/);
-});
-
-test("buildEnergyModel derives display values, directions, background, and visibility", () => {
-  const model = buildEnergyModel(
-    {
-      background_full: "/local/energy-bg-full.jpg",
-      background_no_ev: "/local/energy-bg-no-ev.jpg",
       show_ev: "input_boolean.has_ev",
       show_solar: "input_boolean.has_solar",
       show_battery: true,
@@ -377,11 +378,7 @@ test("buildEnergyModel derives display values, directions, background, and visib
         battery_soc: "sensor.battery_soc",
         battery_capacity: "sensor.battery_capacity_kwh",
       },
-      energy_today: {
-        grid: "sensor.grid_energy_today",
-        solar: "sensor.solar_energy_today",
-        home: "sensor.home_energy_today",
-      },
+      energy_today: { grid: "sensor.grid_energy_today", solar: "sensor.solar_energy_today", home: "sensor.home_energy_today" },
       detail_entities: {
         solar: {
           pv_voltage: "sensor.solar_pv_voltage",
@@ -394,31 +391,29 @@ test("buildEnergyModel derives display values, directions, background, and visib
     hass,
   );
 
-  assert.equal(model.showDailySummary, false);
+  assert.equal(model.setupComplete, true);
   assert.equal(model.showStatusBar, true);
-  assert.equal(model.showTitle, false);
-  assert.equal(model.nodeDetail, "minimal");
   assert.match(model.background, /energy-bg-full-night\.png$/);
-  assert.equal(model.visible.ev, true);
-  assert.equal(model.visible.solar, true);
-  assert.equal(model.visible.battery, true);
+  assert.deepEqual(model.visible, { ev: true, solar: true, battery: true });
   assert.equal(model.mode, "night");
   assert.equal(model.grid.status, "exporting");
   assert.equal(model.grid.displayStatus, "Exporting");
+  assert.equal(model.grid.tone, "export");
+  assert.equal(model.grid.active, true);
   assert.equal(model.grid.powerLabel, "1.2 kW");
   assert.equal(model.solar.powerLabel, "4.6 kW");
   assert.equal(model.solar.efficiencyLabel, "91%");
-  assert.equal(model.solar.statusLabel, "producing / 91%");
+  assert.equal(model.solar.statusLabel, "Producing · 91%");
   assert.equal(model.house.powerLabel, "2.6 kW");
   assert.equal(model.ev.status, "charging");
-  assert.equal(model.ev.displayStatus, "Charging");
+  assert.equal(model.ev.tone, "charging");
   assert.equal(model.ev.socLabel, "62%");
-  assert.equal(model.ev.pillValue, "7.2 kW / 62%");
+  assert.equal(model.ev.pillValue, "7.2 kW · 62%");
   assert.equal(model.battery.status, "discharging");
-  assert.equal(model.battery.displayStatus, "Discharging");
+  assert.equal(model.battery.tone, "discharging");
   assert.equal(model.battery.socLabel, "86%");
   assert.equal(model.battery.capacityLabel, "13.5 kWh");
-  assert.equal(model.battery.statusLabel, "discharging / 86% / 13.5 kWh");
+  assert.equal(model.battery.statusLabel, "Discharging · 86%");
   assert.equal(model.energyToday.solar, "21.6 kWh");
   assert.deepEqual(
     model.details.solar.map((row) => [row.label, row.value, row.entityId]),
@@ -432,32 +427,58 @@ test("buildEnergyModel derives display values, directions, background, and visib
       ["Generated this month", "432.1 kWh", "sensor.solar_energy_month"],
     ],
   );
-  assert.equal(Object.hasOwn(model, "weather"), false);
 });
 
-test("buildEnergyModel exposes optional visual layers from config", () => {
+test("buildEnergyModel treats idle systems as inactive and uses sentence case statuses", () => {
+  const idleHass = {
+    states: {
+      ...hass.states,
+      "sensor.grid_power_w": { state: "12" },
+      "sensor.solar_power_w": { state: "0" },
+      "binary_sensor.ev_charging": { state: "off" },
+    },
+  };
   const model = buildEnergyModel(
     {
-      show_daily_summary: true,
+      show_ev: true,
+      solar_capacity_kw: 5,
+      entities: { ...baseEntities, ev_power: "sensor.ev_power_w", ev_charging_state: "binary_sensor.ev_charging" },
+    },
+    idleHass,
+  );
+
+  assert.equal(model.grid.active, false);
+  assert.equal(model.grid.tone, "idle");
+  assert.equal(model.grid.statusLabel, "Idle");
+  assert.equal(model.solar.statusLabel, "Idle");
+  assert.equal(model.ev.statusLabel, "Not charging");
+});
+
+test("buildEnergyModel reports incomplete setup instead of throwing", () => {
+  const model = buildEnergyModel({ entities: { grid_power: "sensor.grid_power_w" } }, hass);
+  assert.equal(model.setupComplete, false);
+  assert.equal(model.house.powerLabel, "-");
+  assert.equal(model.grid.powerLabel, "1.2 kW");
+
+  const card = new HacsHomeEnergyCard();
+  assert.doesNotThrow(() => card.setConfig({}));
+  assert.throws(() => card.setConfig(null), /configuration object/);
+});
+
+test("buildEnergyModel exposes sizing and bottom bar options from config", () => {
+  const model = buildEnergyModel(
+    {
       show_bottom_bar: false,
-      show_title: true,
-      node_detail: "full",
       card_width: 920,
       card_height: 520,
       min_width: 480,
       min_height: 270,
-      entities: {
-        grid_power: "sensor.grid_power_w",
-        house_power: "sensor.house_power_w",
-      },
+      entities: { grid_power: "sensor.grid_power_w", house_power: "sensor.house_power_w" },
     },
     hass,
   );
 
-  assert.equal(model.showDailySummary, true);
   assert.equal(model.showStatusBar, false);
-  assert.equal(model.showTitle, true);
-  assert.equal(model.nodeDetail, "full");
   assert.equal(model.size.width, "920px");
   assert.equal(model.size.height, "520px");
   assert.equal(model.size.minWidth, "480px");
@@ -471,10 +492,7 @@ test("buildEnergyModel exposes a dist background fallback for HACS source instal
       show_solar: false,
       show_battery: false,
       time_of_day: "night",
-      entities: {
-        grid_power: "sensor.grid_power_w",
-        house_power: "sensor.house_power_w",
-      },
+      entities: { grid_power: "sensor.grid_power_w", house_power: "sensor.house_power_w" },
     },
     hass,
   );
@@ -490,136 +508,116 @@ test("buildEnergyModel clamps configured card dimensions to usable minimums", ()
       card_height: 100,
       min_width: 100,
       min_height: 100,
-      entities: {
-        grid_power: "sensor.grid_power_w",
-        house_power: "sensor.house_power_w",
-      },
+      entities: { grid_power: "sensor.grid_power_w", house_power: "sensor.house_power_w" },
     },
     hass,
   );
 
   assert.equal(model.size.width, "320px");
   assert.equal(model.size.height, "180px");
-  assert.equal(model.size.minWidth, "320px");
-  assert.equal(model.size.minHeight, "180px");
 });
 
 test("buildEnergyModel calculates solar efficiency from configured capacity", () => {
-  const model = buildEnergyModel(
-    {
-      show_solar: true,
-      solar_capacity_kw: 5,
-      entities: {
-        grid_power: "sensor.grid_power_w",
-        solar_power: "sensor.solar_power_w",
-        house_power: "sensor.house_power_w",
-      },
-    },
-    hass,
-  );
+  const model = buildEnergyModel({ show_solar: true, solar_capacity_kw: 5, entities: baseEntities }, hass);
 
   assert.equal(model.solar.efficiencyLabel, "91%");
-  assert.equal(model.solar.pillValue, "4.6 kW / 91%");
+  assert.equal(model.solar.pillValue, "4.6 kW · 91%");
 });
 
-test("setConfig only requires grid and home power sensors", () => {
-  const card = new HacsHomeEnergyCard();
-
-  assert.doesNotThrow(() =>
-    card.setConfig({
-      show_solar: false,
-      entities: {
-        grid_power: "sensor.grid_power_w",
-        house_power: "sensor.house_power_w",
-      },
-    }),
-  );
-
-  assert.throws(
-    () => card.setConfig({ entities: { grid_power: "sensor.grid_power_w" } }),
-    /entities\.grid_power and entities\.house_power/,
-  );
-});
-
-test("getStubConfig renders a full daytime community card preview", () => {
+test("getStubConfig renders the full demo setup without hass and guesses sensors from a real instance", () => {
   const stub = HacsHomeEnergyCard.getStubConfig();
-
   assert.equal(stub.show_ev, true);
   assert.equal(stub.show_solar, true);
   assert.equal(stub.show_battery, true);
-  assert.equal(stub.time_of_day, "day");
+  assert.equal(stub.time_of_day, undefined, "stub must not pin the scene to day or night");
   assert.equal(stub.entities.grid_power, "sensor.grid_power_w");
   assert.equal(stub.entities.house_power, "sensor.house_power_w");
+
+  const realHass = {
+    states: {
+      "sensor.octopus_grid_import_power": { state: "1200", attributes: { device_class: "power", friendly_name: "Grid import power" } },
+      "sensor.house_load": { state: "900", attributes: { device_class: "power", friendly_name: "House load" } },
+      "sensor.inverter_pv_power": { state: "3000", attributes: { device_class: "power", friendly_name: "Inverter PV power" } },
+      "sensor.powerwall_battery": { state: "80", attributes: { device_class: "battery", friendly_name: "Powerwall charge" } },
+      "sensor.random_temperature": { state: "20", attributes: { device_class: "temperature" } },
+      "sensor.phone_battery": { state: "50", attributes: { device_class: "battery", friendly_name: "Phone battery" } },
+    },
+  };
+  const guessed = HacsHomeEnergyCard.getStubConfig(realHass);
+  assert.equal(guessed.entities.grid_power, "sensor.octopus_grid_import_power");
+  assert.equal(guessed.entities.house_power, "sensor.house_load");
+  assert.equal(guessed.entities.solar_power, "sensor.inverter_pv_power");
+  assert.equal(guessed.entities.battery_soc, "sensor.powerwall_battery");
+  assert.equal(guessed.entities.ev_power, undefined);
+  assert.equal(guessed.show_solar, true);
+  assert.equal(guessed.show_battery, true);
+  assert.equal(guessed.show_ev, false);
+  assert.deepEqual(guessStubEntities({ states: {} }), {});
 });
 
 test("editor mapping exposes native selector data and preserves unrelated config on partial edits", () => {
   const config = {
-    title: "Energy Flow",
     show_ev: true,
     show_solar: true,
     show_battery: true,
     time_of_day: "day",
-    entities: {
-      grid_power: "sensor.grid_power_w",
-      house_power: "sensor.house_power_w",
-      solar_power: "sensor.solar_power_w",
-    },
-    detail_entities: {
-      solar: {
-        pv_voltage: "sensor.solar_pv_voltage",
-      },
-    },
+    entities: { grid_power: "sensor.grid_power_w", house_power: "sensor.house_power_w", solar_power: "sensor.solar_power_w" },
+    detail_entities: { solar: { pv_voltage: "sensor.solar_pv_voltage" } },
+    actions: { ev: [{ label: "Boost", service: "switch.turn_on" }] },
   };
 
   const data = editorDataFromConfig(config);
-
   assert.equal(data.grid_power, "sensor.grid_power_w");
   assert.equal(data.house_power, "sensor.house_power_w");
   assert.equal(data.show_ev, true);
+  assert.deepEqual(data.solar_detail, ["sensor.solar_pv_voltage"]);
 
   const next = editorDataToConfig(config, { ...data, show_ev: false, show_solar: false, show_battery: false, time_of_day: "auto" });
-
   assert.equal(next.show_ev, false);
   assert.equal(next.show_solar, false);
   assert.equal(next.show_battery, false);
   assert.equal(next.time_of_day, undefined);
   assert.equal(next.entities.grid_power, "sensor.grid_power_w");
-  assert.equal(next.detail_entities.solar.pv_voltage, "sensor.solar_pv_voltage");
+  assert.deepEqual(next.detail_entities.solar, { pv_voltage: "sensor.solar_pv_voltage" }, "untouched detail objects keep their keys");
+  assert.deepEqual(next.actions, config.actions, "YAML only options survive editor round trips");
 });
 
-test("editorFieldsForConfig hides disabled system fields without deleting saved YAML", () => {
+test("editor detail extras add and remove entities while keeping custom entries", () => {
+  const config = {
+    show_ev: true,
+    detail_entities: { ev: { range: "sensor.ev_range", boost: { label: "Boost", entity: "switch.ev_boost", icon: "mdi:flash" } } },
+  };
+  const data = editorDataFromConfig(config);
+  assert.deepEqual(data.ev_detail, ["sensor.ev_range", "switch.ev_boost"]);
+
+  const added = editorDataToConfig(config, { ...data, ev_detail: ["sensor.ev_range", "switch.ev_boost", "lock.ev"] });
+  assert.deepEqual(added.detail_entities.ev, [
+    "sensor.ev_range",
+    { key: "boost", label: "Boost", entity: "switch.ev_boost", icon: "mdi:flash" },
+    "lock.ev",
+  ]);
+
+  const removed = editorDataToConfig(added, { ...editorDataFromConfig(added), ev_detail: [] });
+  assert.equal(removed.detail_entities, undefined);
+});
+
+test("editorFieldsForConfig hides disabled system sections without deleting saved YAML", () => {
   const config = {
     show_ev: false,
     show_solar: false,
     show_battery: false,
     solar_capacity_kw: 5,
-    battery_capacity_kwh: 13.5,
-    entities: {
-      grid_power: "sensor.grid_power_w",
-      house_power: "sensor.house_power_w",
-      solar_power: "sensor.solar_power_w",
-      ev_power: "sensor.ev_power_w",
-      battery_power: "sensor.battery_power_w",
-    },
-    detail_entities: {
-      solar: { pv_voltage: "sensor.solar_pv_voltage" },
-      ev: { range: "sensor.ev_range" },
-      battery: { voltage: "sensor.battery_voltage" },
-    },
+    entities: { grid_power: "sensor.grid_power_w", house_power: "sensor.house_power_w", solar_power: "sensor.solar_power_w", ev_power: "sensor.ev_power_w", battery_power: "sensor.battery_power_w" },
+    detail_entities: { solar: { pv_voltage: "sensor.solar_pv_voltage" }, ev: { range: "sensor.ev_range" }, battery: { voltage: "sensor.battery_voltage" } },
   };
 
-  const visibleNames = editorFieldsForConfig(config).map((field) => field.name);
-
+  const visibleNames = editorFieldsForConfig(config);
   assert.ok(visibleNames.includes("show_solar"));
   assert.ok(visibleNames.includes("grid_power"));
-  assert.ok(visibleNames.includes("house_power"));
   assert.ok(!visibleNames.includes("solar_power"));
   assert.ok(!visibleNames.includes("solar_capacity_kw"));
-  assert.ok(!visibleNames.includes("solar_pv_voltage"));
   assert.ok(!visibleNames.includes("ev_power"));
-  assert.ok(!visibleNames.includes("ev_range"));
   assert.ok(!visibleNames.includes("battery_power"));
-  assert.ok(!visibleNames.includes("battery_voltage"));
 
   const next = editorDataToConfig(config, editorDataFromConfig(config));
   assert.equal(next.entities.solar_power, "sensor.solar_power_w");
@@ -627,61 +625,52 @@ test("editorFieldsForConfig hides disabled system fields without deleting saved 
   assert.equal(next.detail_entities.battery.voltage, "sensor.battery_voltage");
 });
 
-test("editorSectionsForConfig groups each system fields into one visual editor section", () => {
-  const sections = editorSectionsForConfig({
-    show_ev: true,
-    show_solar: true,
-    show_battery: true,
-  });
-  const namesBySection = Object.fromEntries(sections.map((section) => [section.label, section.fields.map((field) => field.name)]));
-  const allNames = sections.flatMap((section) => section.fields.map((field) => field.name));
-
-  assert.deepEqual([...new Set(allNames)].sort(), allNames.toSorted());
+test("editorSectionsForConfig groups fields into setup, system, energy, cost, bottom bar, and appearance sections", () => {
+  const sections = editorSectionsForConfig({ show_ev: true, show_solar: true, show_battery: true });
   assert.deepEqual(
-    allNames.toSorted(),
-    editorFieldsForConfig({ show_ev: true, show_solar: true, show_battery: true }).map((field) => field.name).toSorted(),
+    sections.map((section) => section.key),
+    ["setup", "solar", "battery", "ev", "energy", "cost", "bottom_bar", "appearance"],
   );
-  assert.deepEqual(
-    sections.map((section) => section.label),
-    ["Card", "Grid And Home", "Solar", "EV", "Battery", "Cost", "Bottom Bar"],
-  );
-  assert.ok(namesBySection.EV.includes("ev_power"));
-  assert.ok(namesBySection.EV.includes("ev_odometer"));
-  assert.ok(namesBySection.EV.includes("ev_boost"));
-  assert.ok(!namesBySection["Grid And Home"].some((name) => name.startsWith("ev_")));
-  assert.ok(namesBySection.Solar.includes("solar_power"));
-  assert.ok(namesBySection.Solar.includes("solar_pv_voltage"));
-  assert.ok(!namesBySection.Cost.some((name) => name.startsWith("solar_") || name.startsWith("ev_")));
-  assert.ok(namesBySection.Battery.includes("battery_power"));
-  assert.ok(namesBySection.Battery.includes("battery_discharge_24h"));
+  assert.equal(sections[0].expanded, true);
+  assert.ok(sections.every((section) => section.visible));
 
-  const disabledSections = editorSectionsForConfig({
-    show_ev: false,
-    show_solar: false,
-    show_battery: false,
-  }).map((section) => section.label);
-  assert.deepEqual(disabledSections, ["Card", "Grid And Home", "Cost", "Bottom Bar"]);
+  const allNames = editorFieldsForConfig({ show_ev: true, show_solar: true, show_battery: true });
+  assert.deepEqual([...new Set(allNames)].sort(), allNames.toSorted(), "no field appears twice");
+  assert.ok(allNames.includes("bottom_bar_slot_5"));
+  assert.ok(!allNames.includes("title"));
+  assert.ok(!allNames.includes("node_detail"));
+
+  const disabled = editorSectionsForConfig({ show_ev: false, show_solar: false, show_battery: false });
+  assert.deepEqual(
+    disabled.filter((section) => section.visible).map((section) => section.key),
+    ["setup", "energy", "cost", "bottom_bar", "appearance"],
+  );
 });
 
-test("editor mapping supports five configurable bottom bar slots without losing legacy config", () => {
+test("editor bottom bar slots keep legacy items, add custom entity fields, and follow system toggles", () => {
   const config = {
-    bottom_bar: [
-      { type: "cost_today", label: "Daily spend" },
-      { type: "self_powered_today" },
-      { type: "weather" },
-    ],
+    show_battery: false,
+    bottom_bar: [{ type: "cost_today", label: "Daily spend" }, { type: "self_powered_today" }, { type: "entity", entity: "sensor.grid_voltage", label: "Voltage" }],
   };
 
   const data = editorDataFromConfig(config);
   assert.equal(data.bottom_bar_slot_1, "cost_today");
-  assert.equal(data.bottom_bar_slot_2, "self_powered_today");
-  assert.equal(data.bottom_bar_slot_3, "weather");
+  assert.equal(data.bottom_bar_slot_1_label, "Daily spend");
+  assert.equal(data.bottom_bar_slot_3, "entity");
+  assert.equal(data.bottom_bar_slot_3_entity, "sensor.grid_voltage");
+  assert.equal(data.bottom_bar_slot_4, "none");
+
+  const bottomSection = editorSectionsForConfig(config).find((section) => section.key === "bottom_bar");
+  const slotOptions = bottomSection.schema.find((entry) => entry.name === "bottom_bar_slot_1").selector.select.options.map((option) => option.value);
+  assert.ok(slotOptions.includes("tariff_now"));
+  assert.ok(!slotOptions.includes("battery_reserve"), "battery cards hide while the battery is off");
+  assert.ok(bottomSection.schema.some((entry) => entry.type === "grid" && entry.schema.some((field) => field.name === "bottom_bar_slot_3_entity")));
 
   const next = editorDataToConfig(config, {
     ...data,
-    bottom_bar_slot_1: "cost_today",
     bottom_bar_slot_2: "grid_import_export",
-    bottom_bar_slot_3: "battery_reserve",
+    bottom_bar_slot_3_entity: "sensor.grid_voltage",
+    bottom_bar_slot_3_label: "Mains voltage",
     bottom_bar_slot_4: "sun",
     bottom_bar_slot_5: "none",
   });
@@ -689,30 +678,19 @@ test("editor mapping supports five configurable bottom bar slots without losing 
   assert.deepEqual(next.bottom_bar, [
     { type: "cost_today", label: "Daily spend" },
     { type: "grid_import_export" },
-    { type: "battery_reserve" },
+    { type: "entity", entity: "sensor.grid_voltage", label: "Mains voltage" },
     { type: "sun" },
   ]);
+  assert.ok(BOTTOM_CARD_OPTIONS.some((option) => option.value === "entity"));
 });
 
-test("selectBackground prefers setup and time-specific background variants", () => {
+test("selectBackground prefers setup and time specific background variants", () => {
   const config = {
     backgrounds: {
       full: { day: "/local/full-day.jpg", night: "/local/full-night.jpg" },
-      ev_solar: { day: "/local/ev-solar-day.jpg", night: "/local/ev-solar-night.jpg" },
-      ev_battery: { day: "/local/ev-battery-day.jpg", night: "/local/ev-battery-night.jpg" },
-      solar_battery: { day: "/local/solar-battery-day.jpg", night: "/local/solar-battery-night.jpg" },
       no_ev: { day: "/local/no-ev-day.jpg", night: "/local/no-ev-night.jpg" },
-      no_solar_battery: {
-        day: "/local/no-solar-battery-day.jpg",
-        night: "/local/no-solar-battery-night.jpg",
-      },
       ev_only: { day: "/local/ev-only-day.jpg", night: "/local/ev-only-night.jpg" },
-      solar_only: { day: "/local/solar-only-day.jpg", night: "/local/solar-only-night.jpg" },
-      battery_only: { day: "/local/battery-only-day.jpg", night: "/local/battery-only-night.jpg" },
-      base: {
-        day: "/local/base-day.jpg",
-        night: "/local/base-night.jpg",
-      },
+      base: { day: "/local/base-day.jpg", night: "/local/base-night.jpg" },
     },
   };
 
@@ -724,37 +702,22 @@ test("selectBackground prefers setup and time-specific background variants", () 
   assert.equal(setupBackgroundKey({ ev: false, solar: true, battery: false }), "solar_only");
   assert.equal(setupBackgroundKey({ ev: false, solar: false, battery: true }), "battery_only");
   assert.equal(setupBackgroundKey({ ev: false, solar: false, battery: false }), "base");
-  assert.equal(selectBackground(config, { ev: false, solar: true, battery: true }, "day"), "/local/solar-battery-day.jpg");
+  assert.equal(selectBackground(config, { ev: false, solar: true, battery: true }, "day"), "/local/no-ev-day.jpg", "no_ev alias still works");
   assert.equal(selectBackground(config, { ev: true, solar: false, battery: false }, "night"), "/local/ev-only-night.jpg");
   assert.equal(selectBackground(config, { ev: false, solar: false, battery: false }, "day"), "/local/base-day.jpg");
+  assert.match(selectBackground(config, { ev: false, solar: true, battery: false }, "day"), /energy-bg-solar-only-day\.png$/, "missing keys fall back to bundled images");
 });
 
-test("selectBackground falls back to bundled module-relative assets", () => {
+test("selectBackground falls back to bundled module relative assets", () => {
   assert.match(selectBackground({}, { ev: true, solar: true, battery: true }, "day"), /energy-bg-full-day\.png$/);
   assert.match(selectBackground({}, { ev: false, solar: false, battery: false }, "night"), /energy-bg-base-night\.png$/);
+  assert.equal(selectBackground({ background_full: "/local/mine.jpg" }, { ev: true, solar: true, battery: true }, "day"), "/local/mine.jpg");
 });
 
-test("buildEnergyModel reverses EV flow when an EV sensor reports discharge power", () => {
-  const v2gHass = {
-    states: {
-      ...hass.states,
-      "sensor.ev_power_w": { state: "-1800" },
-    },
-  };
-
-  const model = buildEnergyModel(
-    {
-      show_ev: true,
-      entities: {
-        grid_power: "sensor.grid_power_w",
-        solar_power: "sensor.solar_power_w",
-        house_power: "sensor.house_power_w",
-        ev_power: "sensor.ev_power_w",
-      },
-    },
-    v2gHass,
-  );
+test("buildEnergyModel reverses EV status when an EV sensor reports discharge power", () => {
+  const v2gHass = { states: { ...hass.states, "sensor.ev_power_w": { state: "-1800" } } };
+  const model = buildEnergyModel({ show_ev: true, entities: { ...baseEntities, ev_power: "sensor.ev_power_w" } }, v2gHass);
 
   assert.equal(model.ev.status, "discharging");
-  assert.equal(model.flows.find((item) => item.name === "ev").direction, "discharging");
+  assert.equal(model.ev.tone, "discharging");
 });

@@ -1,9 +1,10 @@
 import { copyFile, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { build } from "esbuild";
 
 const distDir = "dist";
 const assetsDir = "demo/assets";
-const files = [
+const backgrounds = [
   "energy-bg-full-day.png",
   "energy-bg-full-night.png",
   "energy-bg-ev-solar-day.png",
@@ -24,10 +25,22 @@ const files = [
 
 await rm(distDir, { recursive: true, force: true });
 await mkdir(distDir, { recursive: true });
-await copyFile("hacs-home-energy-card.js", join(distDir, "HACS-home-energy-card.js"));
 
-for (const file of files) {
+// The card imports lit as a bare specifier. Bundling inlines lit so the
+// published module has no runtime dependency on a CDN.
+await build({
+  entryPoints: ["hacs-home-energy-card.js"],
+  outfile: join(distDir, "HACS-home-energy-card.js"),
+  bundle: true,
+  format: "esm",
+  target: ["es2022"],
+  minify: true,
+  legalComments: "inline",
+  logLevel: "warning",
+});
+
+for (const file of backgrounds) {
   await copyFile(join(assetsDir, file), join(distDir, file));
 }
 
-console.log(`Built ${distDir}/ with ${files.length + 1} files.`);
+console.log(`Built ${distDir}/ with ${backgrounds.length + 1} files.`);

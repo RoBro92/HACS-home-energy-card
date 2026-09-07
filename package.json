@@ -1,6 +1,6 @@
 {
   "name": "hacs-home-energy-card",
-  "version": "1.0.11",
+  "version": "1.1.0",
   "description": "A cinematic Home Assistant Lovelace energy dashboard card.",
   "type": "module",
   "scripts": {
@@ -34,5 +34,9 @@
   "bugs": {
     "url": "https://github.com/RoBro92/HACS-home-energy-card/issues"
   },
-  "homepage": "https://github.com/RoBro92/HACS-home-energy-card#readme"
+  "homepage": "https://github.com/RoBro92/HACS-home-energy-card#readme",
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "lit": "^3.3.3"
+  }
 }

@@ -81,12 +81,7 @@
     </div>
 
     <script type="module">
-      import { LitElement, html, css } from "https://cdn.jsdelivr.net/npm/lit@3/+esm";
-
-      window.LitElement = LitElement;
-      window.html = html;
-      window.css = css;
-
+      // The demo uses the built bundle so lit is inlined. Run `npm run build` first.
       class HaCard extends HTMLElement {}
 
       class HaIcon extends HTMLElement {
@@ -119,7 +114,15 @@
             "mdi:lock": "🔒",
             "mdi:lock-open-variant": "🔓",
             "mdi:toggle-switch": "▣",
-            "mdi:toggle-switch-off-outline": "□"
+            "mdi:toggle-switch-off-outline": "□",
+            "mdi:cash": "£",
+            "mdi:cash-clock": "£",
+            "mdi:battery-clock": "▰",
+            "mdi:battery-arrow-up": "▲",
+            "mdi:battery-arrow-down": "▼",
+            "mdi:white-balance-sunny": "☀",
+            "mdi:home-lightning-bolt-outline": "⌂",
+            "mdi:ev-station": "⚡"
           };
           const glyph = icons[this.getAttribute("icon")] || "•";
           this.shadowRoot || this.attachShadow({ mode: "open" });
@@ -142,7 +145,7 @@
       customElements.define("ha-card", HaCard);
       customElements.define("ha-icon", HaIcon);
 
-      await import("../hacs-home-energy-card.js?v=preview-20");
+      await import("../dist/HACS-home-energy-card.js?v=preview-22");
 
       const card = document.querySelector("hacs-home-energy-card");
       const evToggle = document.querySelector("#evToggle");
@@ -203,15 +206,6 @@
         card_height: 506,
         min_width: 320,
         min_height: 180,
-        labels: {
-          grid: "Grid",
-          gridCard: "Grid cost",
-          house: "Home",
-          solar: "Solar",
-          ev: "EV",
-          evCard: "EV",
-          battery: "Battery"
-        },
         tariffs: {
           currency: "£",
           import_rate_entity: "sensor.current_import_rate",
@@ -242,7 +236,7 @@
           battery_soc: "sensor.battery_soc"
         },
         node_info: {
-          solar: { entity: "sensor.solar_efficiency" },
+          solar: { entity: "sensor.inverter_temperature" },
           ev: { entity: "sensor.ev_range" },
           battery: { entity: "sensor.battery_temperature" }
         },
@@ -252,24 +246,14 @@
           grid_export: "sensor.grid_export_today",
           solar: "sensor.solar_energy_today",
           home: "sensor.home_energy_today",
+          ev: "sensor.ev_energy_today",
+          battery_charge: "sensor.battery_charge_today",
           battery_discharge: "sensor.battery_discharge_today"
         },
         detail_entities: {
-          solar: {
-            pv_voltage: "sensor.solar_pv_voltage",
-            pv_current: "sensor.solar_pv_current",
-            energy_week: "sensor.solar_energy_week",
-            energy_month: "sensor.solar_energy_month"
-          },
-          grid: {
-            import_24h: "sensor.grid_import_24h",
-            export_24h: "sensor.grid_export_24h"
-          },
-          house: {
-            energy_24h: "sensor.home_energy_24h",
-            energy_week: "sensor.home_energy_week",
-            energy_month: "sensor.home_energy_month"
-          },
+          solar: ["sensor.solar_pv_voltage", "sensor.solar_pv_current", "sensor.solar_energy_week", "sensor.solar_energy_month"],
+          grid: ["sensor.grid_import_24h", "sensor.grid_export_24h"],
+          house: ["sensor.home_energy_week", "sensor.home_energy_month"],
           ev: {
             range: "sensor.ev_range",
             inside_temperature: "sensor.ev_inside_temperature",
@@ -338,18 +322,18 @@
             "sensor.battery_discharge_today": sensor("7.2", { unit_of_measurement: "kWh" }),
             "sensor.outdoor_temperature": sensor("18.4", { unit_of_measurement: "°C" }),
             "weather.home": sensor("partlycloudy", { temperature: 18.4, temperature_unit: "°C" }),
-            "sensor.solar_efficiency": sensor(Math.round((solar / 5000) * 100), { unit_of_measurement: "%" }),
+            "sensor.inverter_temperature": sensor("41", { unit_of_measurement: "°C" }),
+            "sensor.battery_charge_today": sensor("6.4", { unit_of_measurement: "kWh" }),
             "sensor.ev_range": sensor("168", { unit_of_measurement: "mi" }),
             "sensor.battery_temperature": sensor("22", { unit_of_measurement: "°C" }),
-            "sensor.solar_pv_voltage": sensor("384", { unit_of_measurement: "V" }),
-            "sensor.solar_pv_current": sensor("11.9", { unit_of_measurement: "A" }),
-            "sensor.solar_energy_week": sensor("118.3", { unit_of_measurement: "kWh" }),
-            "sensor.solar_energy_month": sensor("432.1", { unit_of_measurement: "kWh" }),
-            "sensor.grid_import_24h": sensor("9.6", { unit_of_measurement: "kWh" }),
-            "sensor.grid_export_24h": sensor("2.1", { unit_of_measurement: "kWh" }),
-            "sensor.home_energy_24h": sensor("15.9", { unit_of_measurement: "kWh" }),
-            "sensor.home_energy_week": sensor("103.4", { unit_of_measurement: "kWh" }),
-            "sensor.home_energy_month": sensor("421.6", { unit_of_measurement: "kWh" }),
+            "sensor.solar_pv_voltage": sensor("384", { unit_of_measurement: "V", friendly_name: "PV voltage" }),
+            "sensor.solar_pv_current": sensor("11.9", { unit_of_measurement: "A", friendly_name: "PV current" }),
+            "sensor.solar_energy_week": sensor("118.3", { unit_of_measurement: "kWh", friendly_name: "Solar this week" }),
+            "sensor.solar_energy_month": sensor("432.1", { unit_of_measurement: "kWh", friendly_name: "Solar this month" }),
+            "sensor.grid_import_24h": sensor("9.6", { unit_of_measurement: "kWh", friendly_name: "Imported last 24h" }),
+            "sensor.grid_export_24h": sensor("2.1", { unit_of_measurement: "kWh", friendly_name: "Exported last 24h" }),
+            "sensor.home_energy_week": sensor("103.4", { unit_of_measurement: "kWh", friendly_name: "Home this week" }),
+            "sensor.home_energy_month": sensor("421.6", { unit_of_measurement: "kWh", friendly_name: "Home this month" }),
             "sensor.ev_energy_24h": sensor("18.2", { unit_of_measurement: "kWh" }),
             "sensor.ev_energy_week": sensor("42.8", { unit_of_measurement: "kWh" }),
             "sensor.ev_voltage": sensor("238", { unit_of_measurement: "V" }),

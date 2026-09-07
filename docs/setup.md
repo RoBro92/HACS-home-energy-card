@@ -1,6 +1,6 @@
 # HACS Home Energy Card Setup
 
-This card can be configured from the Home Assistant visual card editor or with YAML. The visual editor exposes the same fields listed below; YAML is useful when copying between dashboards or when using helper entities for setup toggles.
+This card can be configured from the Home Assistant visual card editor or with YAML. Everything in the editor has a YAML key, and a few YAML only extras such as helper entities for the setup toggles and custom detail labels are covered below.
 
 ## Install With HACS
 
@@ -22,75 +22,106 @@ type: module
 
 4. Hard refresh the browser after installing or updating the card.
 
-## Visual Editor
+## First Run
 
-In a Home Assistant dashboard:
+1. Edit the dashboard and add **HACS Home Energy Card**.
+2. The card tries to pick grid, home, solar, battery, and EV sensors from what your instance already has, using their power and battery device classes. Check the two sensors under **Setup** and correct them if needed.
+3. Until grid power and home power are both set the card shows a short hint in place of the nodes.
+4. Switch on **Solar**, **Battery**, and **EV** for the systems you have. A section for each appears underneath.
 
-1. Edit the dashboard.
-2. Add a manual card or search for HACS Home Energy Card.
-3. Select your entity IDs from the card editor dropdowns.
-4. Use the setup fields to enable or disable EV, solar, and battery sections.
+The editor is split into sections:
 
-The `show_ev`, `show_solar`, and `show_battery` fields accept either `true`/`false` or a helper entity such as `input_boolean.has_ev`. Helper entities are useful when you want one dashboard card to adapt to different homes.
+| Section | What lives there |
+| --- | --- |
+| Setup | Grid power, home power, and the three system toggles. |
+| Solar, Battery, EV | Shown only when that system is on. Live sensors, capacity, daily totals, an extra node value, and detail panel extras. |
+| Grid and home energy | Daily import, export, and home totals for the glance cards and detail panels. |
+| Cost and tariff | Currency, cost today, budget, and live or fixed rates. |
+| Bottom bar | Up to five glance cards. Custom entity cards get an entity and label field. |
+| Appearance | Node labels, sun entity, day or night lock, weather, and a fixed pixel size. |
 
-For the quickest setup, configure only `entities.grid_power` and `entities.house_power` first. After the card renders, add `show_solar`, `show_ev`, `show_battery`, and the matching optional sensors one section at a time.
+Turning a system off hides its section but keeps the YAML, so switching it back on restores every sensor.
 
-## Visual Layout Options
+## Setup Toggles
 
-The default layout keeps the background clear: floating nodes show compact live values, the bottom bar shows glance information such as cost, energy split, battery reserve, sun state, and weather, and the top daily summary is hidden.
+`show_ev`, `show_solar`, and `show_battery` accept `true`, `false`, or a helper entity:
 
-Clicking a floating node or bottom bar item opens an in card detail panel. The default rows show the core value for that group, and `detail_entities` adds extra rows such as voltage, current, range, odometer, and longer energy totals. Sensor style rows open the Home Assistant more info dialog when clicked. Lock, switch, button, and input button entities render as circular controls at the bottom of the panel.
+```yaml
+show_ev: input_boolean.has_ev
+show_solar: true
+show_battery: input_boolean.has_battery
+```
 
-| Field | Default | Notes |
+Helper entities are useful when one dashboard card serves several homes. Entity states `on`, `true`, `home`, `charging`, `plugged_in`, and `connected` count as on.
+
+## Required Sensors
+
+| Field | Unit | Notes |
 | --- | --- | --- |
-| `show_title` | `false` | Set to `true` if you want optional top left title and subtitle text. |
-| `show_daily_summary` | `false` | Set to `true` to restore the top daily kWh strip. |
-| `show_bottom_bar` | `true` | Set to `false` for a cleaner image only card. |
-| `node_detail` | `minimal` | Use `full` if floating nodes should also show status text. |
-| `card_width` | blank | Optional fixed card width in pixels. |
-| `card_height` | blank | Optional fixed card height in pixels. |
-| `min_width` | `320` | Minimum width in pixels. Lower configured widths are clamped. |
-| `min_height` | `180` | Minimum height in pixels. Lower configured heights are clamped. |
+| `entities.grid_power` | W | Positive values import from the grid. Negative values export. |
+| `entities.house_power` | W | Current home consumption. |
 
-Leave `card_width` and `card_height` blank for a responsive card that fills the available dashboard column. Set both values when you are designing for a fixed wall panel, kiosk, or dashboard grid slot:
+## Solar
 
-```yaml
-card_width: 900
-card_height: 506
-min_width: 320
-min_height: 180
-```
+| Field | Unit | Notes |
+| --- | --- | --- |
+| `entities.solar_power` | W | Current solar production. |
+| `solar_capacity_kw` | kW | Array size, for example `5`. Gives the efficiency percentage shown on the node. |
+| `entities.solar_capacity` | kW or W | Sensor alternative to `solar_capacity_kw`. |
+| `energy_today.solar` | kWh | Generated today, for the `solar_today` card and the detail panel. |
 
-If only `card_width` is set, the card keeps its normal aspect ratio. If both width and height are set, the scene scales into that exact pixel box.
+## Battery
 
-## Labels, Node Extras, And Bottom Bar
+| Field | Unit | Notes |
+| --- | --- | --- |
+| `entities.battery_power` | W | Positive values charge the battery. Negative values discharge it. |
+| `entities.battery_soc` | % | State of charge. |
+| `battery_capacity_kwh` | kWh | Capacity, for example `13.5`. Gives the reserve estimate. |
+| `entities.battery_capacity` | kWh or Wh | Sensor alternative to `battery_capacity_kwh`. |
+| `energy_today.battery_charge` | kWh | Charged today. |
+| `energy_today.battery_discharge` | kWh | Discharged today. |
 
-Every floating node title can be renamed without changing entity IDs:
+## EV
 
-```yaml
-labels:
-  grid: Grid
-  house: Home
-  solar: Solar
-  ev: EV
-  battery: Battery
-  gridCard: Grid cost
-  evCard: EV
-```
+| Field | Unit | Notes |
+| --- | --- | --- |
+| `entities.ev_power` | W | Charge power. Negative values are treated as vehicle to home discharge. |
+| `entities.ev_soc` | % | State of charge. |
+| `entities.ev_charging_state` | state or binary | `on`, `true`, or `charging` shows as charging. `off`, `false`, or `not_charging` shows as not charging. Other states are shown as readable text. |
+| `energy_today.ev` | kWh | Charged today. |
 
-Add one compact extra value to any floating node with `node_info`:
+## Grid And Home Energy
 
 ```yaml
-node_info:
-  solar:
-    entity: sensor.solar_efficiency
-  ev:
-    entity: sensor.ev_range
-  battery:
-    entity: sensor.battery_temperature
+energy_today:
+  grid_import: sensor.grid_import_today
+  grid_export: sensor.grid_export_today
+  home: sensor.home_energy_today
+  grid: sensor.grid_energy_today
 ```
 
-Choose up to five bottom glance cards with `bottom_bar`. The visual editor exposes these as `Bottom Bar Slot 1` through `Bottom Bar Slot 5`.
+`grid_import` and `home` drive the `self_powered_today` card. `grid_import` and `grid_export` drive the `grid_import_export` card. `grid` is a net figure shown in the grid detail panel only.
+
+## Cost And Tariff
+
+```yaml
+tariffs:
+  currency: £
+  import_rate_entity: sensor.current_import_rate
+  export_rate_entity: sensor.current_export_rate
+  import_rate: 0.34
+  export_rate: 0.15
+
+costs:
+  today_entity: sensor.energy_cost_today
+  daily_budget: 5
+```
+
+Rate sensors win over fixed rates when both are set, which suits time of use tariffs. The `cost_now` card multiplies the current grid power by the matching rate, and `tariff_now` shows the rates themselves. `costs.daily_budget` is optional and fills the `cost_today` progress bar.
+
+## Bottom Bar
+
+Choose up to five glance cards. Leave `bottom_bar` out and the card shows the ones it has data for, in this order: cost today, self powered, grid import and export, battery reserve, solar today, grid cost, EV today, home today, then sunrise or sunset.
 
 ```yaml
 bottom_bar:
@@ -101,26 +132,29 @@ bottom_bar:
   - type: weather
 ```
 
-Recommended built in types:
-
-| Type | Shows | Useful sensors |
+| Type | Shows | Needs |
 | --- | --- | --- |
-| `cost_today` | Daily spend and optional budget progress | `costs.today_entity`, `costs.daily_budget` |
-| `cost_now` | Current grid import cost or export credit per hour | `entities.grid_power`, tariff rates |
-| `self_powered_today` | Percentage of home use covered without grid import | `energy_today.home`, `energy_today.grid_import` |
-| `grid_import_export` | Import/export comparison for today | `energy_today.grid_import`, `energy_today.grid_export` |
-| `battery_reserve` | Estimated remaining battery runtime at current home load | `entities.battery_soc`, battery capacity, `entities.house_power` |
-| `battery_discharge` | Battery discharge today | `energy_today.battery_discharge` |
-| `sun` | Next sunrise or sunset | `entities.sun` |
-| `weather` | Weather state and temperature | `entities.weather`, optional `entities.outdoor_temperature` |
-| `entity` | Any custom entity value | `entity`, `label`, optional `status` and `icon` |
+| `cost_today` | Spend so far today, with a budget bar | `costs.today_entity`, optional `costs.daily_budget` |
+| `cost_now` | Import cost or export credit per hour | `entities.grid_power` and a tariff rate |
+| `tariff_now` | Current import rate, with the export rate as caption | a tariff rate |
+| `self_powered_today` | Share of home use not imported | `energy_today.home`, `energy_today.grid_import` |
+| `grid_import_export` | Import and export today | `energy_today.grid_import`, `energy_today.grid_export` |
+| `home_today` | Home energy used today | `energy_today.home` |
+| `solar_today` | Solar generated today | `energy_today.solar` |
+| `ev_today` | EV energy charged today | `energy_today.ev` |
+| `battery_reserve` | Hours of battery left at the current home load | `entities.battery_soc`, a capacity |
+| `battery_charge` | Battery charged today | `energy_today.battery_charge` |
+| `battery_discharge` | Battery discharged today | `energy_today.battery_discharge` |
+| `sun` | Next sunset or sunrise | `entities.sun` |
+| `weather` | Temperature and conditions | `entities.weather`, optional `entities.outdoor_temperature` |
+| `entity` | Any entity | `entity`, `label`, optional `status`, `icon`, `color` |
 
-Legacy types `grid`, `cost`, `solar`, `house`, `ev`, and `battery` still work, but they mostly duplicate the floating node values. For a cleaner dashboard, use the glance types above.
-
-You can also show any sensor:
+Solar, EV, and battery cards disappear when that system is off. Any card can be renamed or re-iconed in YAML:
 
 ```yaml
 bottom_bar:
+  - type: cost_today
+    label: Spend
   - type: entity
     label: Water
     status: Today
@@ -128,157 +162,39 @@ bottom_bar:
     icon: mdi:water
 ```
 
-## Required Sensors
+The legacy `grid`, `solar`, `house`, `ev`, `battery`, and `cost` types still work, but they repeat the node values.
 
-Only these two sensors are always required:
+## Detail Panels
 
-| Field | Unit | Notes |
-| --- | --- | --- |
-| `entities.grid_power` | W | Positive values import from grid. Negative values export to grid. |
-| `entities.house_power` | W | Current home consumption. |
-
-## Optional Solar Sensors
-
-Enable solar with `show_solar: true` or an entity that is on.
-
-| Field | Unit | Notes |
-| --- | --- | --- |
-| `entities.solar_power` | W | Current solar production. |
-| `solar_capacity_kw` | kW | Fixed install capacity, for example `5` for a 5 kW array. |
-| `entities.solar_capacity` | kW or W | Optional sensor alternative to `solar_capacity_kw`. |
-
-Solar efficiency is calculated as:
-
-```text
-solar_power / solar_capacity * 100
-```
-
-For example, `4500 W` production on a `5 kW` array displays `90%`.
-
-Solar modal detail rows can be added with:
+Tapping a node or glance card opens a panel with the core values for that group. `detail_entities` adds rows and controls. The simplest form is a list of entity IDs, which is what the editor writes:
 
 ```yaml
 detail_entities:
   solar:
-    pv_voltage: sensor.solar_pv_voltage
-    pv_current: sensor.solar_pv_current
-    energy_24h: sensor.solar_energy_24h
-    energy_week: sensor.solar_energy_week
-    energy_month: sensor.solar_energy_month
+    - sensor.solar_pv_voltage
+    - sensor.solar_pv_current
+    - sensor.solar_energy_week
+  ev:
+    - sensor.ev_range
+    - sensor.ev_odometer
+    - lock.ev
 ```
 
-## Optional Battery Sensors
-
-Enable battery with `show_battery: true` or an entity that is on.
-
-| Field | Unit | Notes |
-| --- | --- | --- |
-| `entities.battery_power` | W | Positive values charge the battery. Negative values discharge the battery. |
-| `entities.battery_soc` | % | Battery state of charge. |
-| `battery_capacity_kwh` | kWh | Fixed battery capacity, for example `13.5`. |
-| `entities.battery_capacity` | kWh or Wh | Optional sensor alternative to `battery_capacity_kwh`. |
-
-Battery modal detail rows can be added with:
-
-```yaml
-detail_entities:
-  battery:
-    voltage: sensor.battery_voltage
-    current: sensor.battery_current
-    charge_24h: sensor.battery_charge_24h
-    discharge_24h: sensor.battery_discharge_24h
-```
-
-## Optional EV Sensors
-
-Enable EV with `show_ev: true` or an entity that is on.
-
-| Field | Unit | Notes |
-| --- | --- | --- |
-| `entities.ev_power` | W | Current EV charge power. Negative values are treated as vehicle to home discharge. |
-| `entities.ev_soc` | % | EV state of charge. |
-| `entities.ev_charging_state` | state or binary | `on`, `true`, or `charging` displays as charging. `off`, `false`, or `not_charging` displays as not charging. Other states are shown as readable text. |
-
-EV modal detail rows and controls can be added with:
+Rows are named after the entity. Lock, switch, button, and input button entities become circular controls at the bottom of the panel: a locked lock shows an **Unlock** button, a switch toggles. Use the keyed form for a custom label or icon:
 
 ```yaml
 detail_entities:
   ev:
     range: sensor.ev_range
-    inside_temperature: sensor.ev_inside_temperature
-    odometer: sensor.ev_odometer
-    voltage: sensor.ev_voltage
-    current: sensor.ev_current
-    energy_24h: sensor.ev_energy_24h
-    energy_week: sensor.ev_energy_week
-    lock: lock.ev
     boost:
       label: Boost
       entity: switch.ev_boost
       icon: mdi:flash
 ```
 
-Any sensor, binary sensor, or other read only entity added under `detail_entities` is shown as a value row. Lock, switch, button, and input button entities become action buttons automatically. For example a locked EV lock entity shows a green `Unlock` button, while an unlocked lock shows a red `Lock` button.
+Known keys such as `pv_voltage`, `energy_week`, or `import_24h` get tidy labels. Unknown keys are converted, so `inverter_temperature` displays as `Inverter Temperature`. Sensor rows open the Home Assistant more info dialog when tapped.
 
-## Optional Grid And Home Detail Sensors
-
-Grid cost supports either fixed rates or dynamic rate sensors. Dynamic sensors are better for multiple tariff energy providers because the card reads the current import and export tariff directly from Home Assistant.
-
-```yaml
-tariffs:
-  currency: £
-  import_rate: 0.34
-  export_rate: 0.15
-  import_rate_entity: sensor.current_import_rate
-  export_rate_entity: sensor.current_export_rate
-```
-
-The cost card shows the current import cost or export credit per hour based on `entities.grid_power`.
-
-For the bottom bar cost and energy comparison cards, add daily sensors where available:
-
-```yaml
-costs:
-  today_entity: sensor.energy_cost_today
-  daily_budget: 5
-
-energy_today:
-  grid_import: sensor.grid_import_today
-  grid_export: sensor.grid_export_today
-  home: sensor.home_energy_today
-  battery_discharge: sensor.battery_discharge_today
-```
-
-`costs.daily_budget` is optional. If it is set, the `cost_today` card shows a progress bar toward that daily budget.
-
-```yaml
-detail_entities:
-  grid:
-    import_24h: sensor.grid_import_24h
-    export_24h: sensor.grid_export_24h
-  house:
-    energy_24h: sensor.home_energy_24h
-    energy_week: sensor.home_energy_week
-    energy_month: sensor.home_energy_month
-```
-
-The card also accepts custom keys under each detail group. Unknown keys are converted into readable labels, so `inverter_temperature` displays as `Inverter Temperature`.
-
-## Optional Detail Panel Actions
-
-Detail panels can show quick action buttons in two ways. For normal entity controls, place the entity under `detail_entities`:
-
-```yaml
-detail_entities:
-  ev:
-    lock: lock.ev
-    boost:
-      label: Boost
-      entity: switch.ev_boost
-      icon: mdi:flash
-```
-
-For custom service calls, use `actions`. Actions are Home Assistant service calls, so use entity IDs and services rather than device IDs.
+For custom service calls use `actions`:
 
 ```yaml
 actions:
@@ -287,164 +203,59 @@ actions:
       service: switch.turn_on
       target:
         entity_id: switch.ev_boost
-    - label: Unlock
-      service: lock.unlock
-      target:
-        entity_id: lock.ev
 ```
 
-## Day And Night Image Switching
+## Nodes And Labels
 
-The card uses `entities.sun` for day/night switching. In most Home Assistant installs this should be:
+Every node shows its live power and a direction line: importing or exporting, producing, consuming, charging or discharging, with a colour matched dot. Nodes with power flowing carry a soft breathing ring; the ring is static when the browser asks for reduced motion.
+
+Add one compact extra value to any node with `node_info`, and rename nodes with `labels`:
 
 ```yaml
-entities:
-  sun: sun.sun
+node_info:
+  solar:
+    entity: sensor.inverter_temperature
+  ev:
+    entity: sensor.ev_range
+
+labels:
+  grid: Grid
+  house: Home
+  solar: Solar
+  ev: Car
+  battery: Battery
 ```
 
-The bundled backgrounds switch to day when the sun entity is `above_horizon` and night when it is `below_horizon`. You can also set `time_of_day` to an entity or a fixed value:
+`labels.gridCard` and `labels.evCard` rename only the detail panel titles, which default to `Electricity` and `Electric Vehicle`.
+
+## Day And Night
+
+The scene follows `entities.sun`, which defaults to `sun.sun`, and crossfades when the sun crosses the horizon. To lock the scene or drive it from another entity:
 
 ```yaml
+time_of_day: night
+# or
 time_of_day: binary_sensor.daylight
 ```
 
 Accepted day states are `above_horizon`, `day`, `sunny`, `on`, and `true`. Accepted night states are `below_horizon`, `night`, `off`, and `false`.
 
-## Full Example
+## Sizing
+
+Leave `card_width` and `card_height` blank for a responsive card that fills the dashboard column. Set both for a wall panel or kiosk:
 
 ```yaml
-type: custom:hacs-home-energy-card
-
-show_ev: input_boolean.has_ev
-show_solar: input_boolean.has_solar
-show_battery: input_boolean.has_battery
-
-solar_capacity_kw: 5
-battery_capacity_kwh: 13.5
-show_title: false
-show_daily_summary: false
-show_bottom_bar: true
-node_detail: minimal
 card_width: 900
 card_height: 506
 min_width: 320
 min_height: 180
-
-labels:
-  grid: Grid
-  gridCard: Grid cost
-  house: Home
-  solar: Solar
-  ev: EV
-  evCard: EV
-  battery: Battery
-
-tariffs:
-  currency: £
-  import_rate_entity: sensor.current_import_rate
-  export_rate_entity: sensor.current_export_rate
-
-costs:
-  today_entity: sensor.energy_cost_today
-  daily_budget: 5
-
-bottom_bar:
-  - type: cost_today
-  - type: self_powered_today
-  - type: grid_import_export
-  - type: battery_reserve
-  - type: weather
-
-entities:
-  sun: sun.sun
-  weather: weather.home
-  outdoor_temperature: sensor.outdoor_temperature
-  grid_power: sensor.grid_power_w
-  house_power: sensor.house_consumption_w
-  solar_power: sensor.solar_power_w
-  battery_power: sensor.battery_power_w
-  battery_soc: sensor.battery_soc
-  ev_power: sensor.ev_charging_power_w
-  ev_soc: sensor.ev_state_of_charge
-  ev_charging_state: binary_sensor.ev_charging
-
-node_info:
-  solar:
-    entity: sensor.solar_efficiency
-  ev:
-    entity: sensor.ev_range
-  battery:
-    entity: sensor.battery_temperature
-
-energy_today:
-  grid: sensor.grid_energy_today
-  grid_import: sensor.grid_import_today
-  grid_export: sensor.grid_export_today
-  solar: sensor.solar_energy_today
-  home: sensor.home_energy_today
-  battery_discharge: sensor.battery_discharge_today
-
-detail_entities:
-  solar:
-    pv_voltage: sensor.solar_pv_voltage
-    pv_current: sensor.solar_pv_current
-    energy_week: sensor.solar_energy_week
-    energy_month: sensor.solar_energy_month
-  grid:
-    import_24h: sensor.grid_import_24h
-    export_24h: sensor.grid_export_24h
-  house:
-    energy_24h: sensor.home_energy_24h
-  ev:
-    energy_24h: sensor.ev_energy_24h
-    voltage: sensor.ev_voltage
-    current: sensor.ev_current
-  battery:
-    voltage: sensor.battery_voltage
-    current: sensor.battery_current
-    charge_24h: sensor.battery_charge_24h
-    discharge_24h: sensor.battery_discharge_24h
 ```
 
-## No EV Example
-
-```yaml
-type: custom:hacs-home-energy-card
-show_ev: false
-show_solar: true
-show_battery: true
-solar_capacity_kw: 5
-battery_capacity_kwh: 13.5
-
-entities:
-  sun: sun.sun
-  grid_power: sensor.grid_power_w
-  house_power: sensor.house_consumption_w
-  solar_power: sensor.solar_power_w
-  battery_power: sensor.battery_power_w
-  battery_soc: sensor.battery_soc
-```
-
-## No Solar Or Battery Example
-
-```yaml
-type: custom:hacs-home-energy-card
-show_ev: true
-show_solar: false
-show_battery: false
-
-entities:
-  sun: sun.sun
-  grid_power: sensor.grid_power_w
-  house_power: sensor.house_consumption_w
-  ev_power: sensor.ev_charging_power_w
-  ev_soc: sensor.ev_state_of_charge
-  ev_charging_state: binary_sensor.ev_charging
-```
+If only `card_width` is set the card keeps its scene aspect ratio. With both set the scene scales into that exact box. The layout adapts to the card width, not the browser width, so a narrow column on a wide screen gets the compact nodes and glance bar.
 
 ## Background Selection
 
-The card automatically chooses one of the bundled day/night backgrounds based on the active setup:
+The card picks one of the bundled day and night images for the active setup:
 
 | Setup | Active options |
 | --- | --- |
@@ -457,4 +268,15 @@ The card automatically chooses one of the bundled day/night backgrounds based on
 | `battery_only` | Battery only |
 | `base` | No EV, solar, or battery |
 
-You only need custom background config if you want to override the bundled images.
+Override any of them with `backgrounds.<setup>.day` and `.night`. Missing keys fall back to the bundled images.
+
+## Full Example
+
+See [examples/dashboard.yaml](../examples/dashboard.yaml) for a full setup and [examples/dashboard-no-ev.yaml](../examples/dashboard-no-ev.yaml) for solar and battery only. A minimal card is just:
+
+```yaml
+type: custom:hacs-home-energy-card
+entities:
+  grid_power: sensor.grid_power_w
+  house_power: sensor.house_consumption_w
+```

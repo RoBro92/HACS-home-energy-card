@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.1.0
+
+Focus release: fewer options, a smoother first run, and glance cards that put the number first.
+
+- Adds a sectioned visual editor. Setup holds the two required sensors and the system toggles; Solar, Battery, and EV sections appear only when switched on; energy, cost, bottom bar, and appearance each get their own panel with helper text under the fields.
+- Adds detail panel extras as a multi entity picker. `detail_entities` now accepts a plain list of entity IDs, and rows are named after the entity.
+- Adds custom entity cards to the bottom bar editor, with entity and label fields.
+- Adds `tariff_now`, `home_today`, `solar_today`, `ev_today`, and `battery_charge` glance cards, plus `energy_today.ev` and `energy_today.battery_charge`.
+- Adds a data aware default bottom bar. With no `bottom_bar` configured the card shows only the glance cards it has sensors for.
+- Adds sensor guessing when the card is added from the picker, using power and battery device classes.
+- Adds a first run hint in place of the nodes until grid and home power are set. `setConfig` no longer throws for an incomplete config, so the editor preview keeps working.
+- Reworks the glance cards so the value is the headline and the caption sits underneath. Labels use sentence case.
+- Adds a direction line with a colour matched dot to every node, and a soft breathing ring while power is flowing. Reduced motion is respected.
+- Adds a crossfade between backgrounds when the scene changes between day and night or between setups.
+- Adds a `getGridOptions` hint so the card spans a full section width.
+- Replaces viewport media queries with container queries so a narrow column on a wide screen gets the compact layout.
+- Removes the title, subtitle, and daily summary strip and the `show_title`, `show_daily_summary`, `title`, `subtitle`, and `node_detail` options. Nodes always show their direction line and the summary values live in the glance bar and detail panels.
+- Removes undocumented camelCase and alias config keys, `bottom_bar_limit`, and the animated flow model that was no longer rendered. Documented aliases `backgrounds.no_ev`, `backgrounds.no_solar_battery`, `background_full`, and `background_no_ev` still work.
+- Removes the `/local/energy-bg-*.jpg` fallback. Missing background keys now fall back to the bundled images.
+- Bundles lit into `dist/HACS-home-energy-card.js` at build time. The card no longer fetches lit from a CDN when it loads, so it works on installs without internet access. `npm ci` is now required before `npm run build`.
+- Drops `time_of_day` from the stub config so a card added from the picker follows the sun instead of being locked to day.
+
+
 ## 1.0.11
 
 - Replaces the duplicate bottom node pills with configurable bottom glance cards.
