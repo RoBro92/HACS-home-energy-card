@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run build
+      - name: Committed dist must match the tag
+        run: git diff --exit-code -- dist/
+      - run: npm run check
+      - name: Tag must match package.json
+        run: |
+          expected="v$(node -p "require('./package.json').version")"
+          test "${GITHUB_REF_NAME}" = "${expected}" || { echo "Tag ${GITHUB_REF_NAME} does not match package.json ${expected}"; exit 1; }
+      - name: Release notes from the changelog
+        run: node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" > release-notes.md
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          body_path: release-notes.md
+          # No assets on purpose. HACS reads dist/ from the tagged tree, which keeps
+          # the bundled backgrounds beside the card. A single .js asset would make
+          # HACS download only that file.
