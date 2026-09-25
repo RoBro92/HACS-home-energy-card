@@ -1,11 +1,19 @@
 name: Release
 
+# Two ways to release, both publish the same thing:
+#   - Actions > Release > Run workflow on main. Tags v<package.json version> for you.
+#   - Push a v* tag yourself. The tag must match package.json.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -17,19 +25,36 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build
-      - name: Committed dist must match the tag
+      - name: Committed dist must match the source
         run: git diff --exit-code -- dist/
       - run: npm run check
-      - name: Tag must match package.json
+      - name: Resolve the release tag
+        id: version
         run: |
-          expected="v$(node -p "require('./package.json').version")"
-          test "${GITHUB_REF_NAME}" = "${expected}" || { echo "Tag ${GITHUB_REF_NAME} does not match package.json ${expected}"; exit 1; }
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            test "${GITHUB_REF}" = "refs/heads/main" || { echo "Run the release from main, not ${GITHUB_REF}."; exit 1; }
+            if git ls-remote --exit-code --tags origin "refs/tags/${tag}" > /dev/null; then
+              echo "${tag} already exists. Bump version in package.json and add a CHANGELOG.md section first."
+              exit 1
+            fi
+          else
+            test "${GITHUB_REF_NAME}" = "${tag}" || { echo "Tag ${GITHUB_REF_NAME} does not match package.json ${tag}"; exit 1; }
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
       - name: Release notes from the changelog
-        run: node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" > release-notes.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: node scripts/release-notes.mjs "${VERSION}" > release-notes.md
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          # On a manual run the tag does not exist yet; GitHub creates it on this commit.
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ steps.version.outputs.tag }}
           body_path: release-notes.md
           # No assets on purpose. HACS reads dist/ from the tagged tree, which keeps
           # the bundled backgrounds beside the card. A single .js asset would make

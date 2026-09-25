@@ -73,6 +73,10 @@ test("release workflow publishes from the tagged tree without HACS-breaking asse
   const validate = read(".github/workflows/validate.yml");
 
   assert.match(workflow, /tags: \["v\*"\]/);
+  assert.match(workflow, /workflow_dispatch:/, "releases can be started from the Actions tab");
+  assert.match(workflow, /refs\/heads\/main/, "manual releases only run from main");
+  assert.match(workflow, /git ls-remote --exit-code --tags origin/, "manual releases refuse an existing tag");
+  assert.match(workflow, /tag_name: \$\{\{ steps\.version\.outputs\.tag \}\}/);
   assert.match(workflow, /git diff --exit-code -- dist\//);
   assert.match(workflow, /release-notes\.mjs/);
   assert.doesNotMatch(workflow, /files:/, "no release assets, HACS must read dist/ from the tag");

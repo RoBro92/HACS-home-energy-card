@@ -109,4 +109,4 @@ npm run build   # bundles lit into dist/ and copies the backgrounds
 npm run check   # syntax check and unit tests
 ```
 
-`dist/` is what HACS serves and what `demo/index.html` loads, so commit it with each change. Releases are created by pushing a `v*` tag that matches `package.json`; see [the release checklist](.github/release-checklist.md).
+`dist/` is what HACS serves and what `demo/index.html` loads, so commit it with each change. To release, bump `package.json` and `CHANGELOG.md`, merge to `main`, then run the Release workflow from the Actions tab (or push a matching `v*` tag); see [the release checklist](.github/release-checklist.md).
