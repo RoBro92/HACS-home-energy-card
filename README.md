@@ -103,6 +103,7 @@ tariffs:
 
 costs:
   today_entity: sensor.energy_cost_today
+  export_today_entity: sensor.energy_export_credit_today
   daily_budget: 5
 
 bottom_bar:
@@ -208,7 +209,8 @@ The README is a quick start. Detailed setup is split into focused docs and examp
 | `labels.gridCard/evCard` | No | Renames bottom bar labels where a shorter label is useful. |
 | `node_info.<group>.entity` | No | Adds one extra compact value to a floating node. |
 | `bottom_bar` | No | Ordered list of up to five bottom cards. Recommended types are `cost_today`, `cost_now`, `self_powered_today`, `grid_import_export`, `battery_reserve`, `battery_discharge`, `sun`, and `weather`; `entity` cards support custom sensors. Legacy `grid`, `cost`, `solar`, `house`, `ev`, and `battery` still work. |
-| `costs.today_entity` | No | Daily energy cost sensor used by the `cost_today` bottom card. |
+| `costs.today_entity` | No | Daily energy import cost sensor used to calculate net cost for the `cost` bottom card. |
+| `costs.export_today_entity` | No | Daily energy export credit sensor. Subtracted from import cost to display net cost. |
 | `costs.daily_budget` | No | Optional daily budget used to fill the `cost_today` progress bar. |
 | `tariffs.import_rate/export_rate` | No | Fixed import/export rates per kWh for grid cost calculations. |
 | `tariffs.import_rate_entity/export_rate_entity` | No | Dynamic rate sensors for multiple tariff providers. These override fixed rates when available. |

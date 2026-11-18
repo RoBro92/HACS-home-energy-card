@@ -363,15 +363,27 @@ function progressPercent(value, target) {
   return Math.max(0, Math.min(100, Math.round((parsed / parsedTarget) * 100)));
 }
 
+function progressColor(percent) {
+  if (percent === null || percent === undefined) return null;
+  if (percent < 50) return "#4caf50";
+  if (percent < 75) return "#ffeb3b";
+  if (percent < 90) return "#ff9800";
+  return "#f44336";
+}
+
 function gridCostModel(config, hass, gridWatts) {
   const importing = gridWatts >= 0;
-  const rate = rateValue(config, hass, importing ? "import" : "export");
+  const importRate = rateValue(config, hass, "import");
+  const exportRate = rateValue(config, hass, "export");
+  const rate = importing ? importRate : exportRate;
   if (rate === null) {
     return {
       watts: gridWatts,
       rate: null,
+      importRate,
+      exportRate,
       status: importing ? "import cost" : "export credit",
-      displayStatus: importing ? "Import Cost" : "Export Credit",
+      displayStatus: importing ? "Import" : "Export",
       valueLabel: "-",
     };
   }
@@ -379,8 +391,10 @@ function gridCostModel(config, hass, gridWatts) {
   return {
     watts: gridWatts,
     rate,
+    importRate,
+    exportRate,
     status: importing ? "import cost" : "export credit",
-    displayStatus: importing ? "Import Cost" : "Export Credit",
+    displayStatus: importing ? "Import" : "Export",
     valueLabel: formatMoneyPerHour(hourly, currencySymbol(config)),
   };
 }
@@ -391,20 +405,43 @@ function costsConfig(config) {
 
 function costTodayCard(config, hass) {
   const costs = costsConfig(config);
-  const entity = costs.today_entity || costs.todayEntity || config.entities?.cost_today;
-  const value = parseNumber(stateValue(hass, entity));
+  const importEntity = costs.today_entity || costs.todayEntity || config.entities?.cost_today;
+  const exportEntity = costs.export_today_entity || costs.exportTodayEntity || config.entities?.export_cost_today;
+  const importValue = parseNumber(stateValue(hass, importEntity)) || 0;
+  const exportValue = exportEntity ? (parseNumber(stateValue(hass, exportEntity)) || 0) : 0;
+  const netValue = importValue - exportValue;
   const budget = parseNumber(costs.daily_budget ?? costs.dailyBudget);
   return {
     kind: "cost_today",
     label: "Cost Today",
     status: budget ? "Budget" : "Today",
-    value: formatMoney(value, currencySymbol(config)),
-    progress: progressPercent(value, budget),
-    progressLabel: budget ? `${formatMoney(value, currencySymbol(config))} / ${formatMoney(budget, currencySymbol(config))}` : null,
+    value: formatMoney(netValue, currencySymbol(config)),
+    progress: progressPercent(netValue, budget),
+    progressColor: progressColor(progressPercent(netValue, budget)),
+    progressLabel: budget ? `${formatMoney(netValue, currencySymbol(config))} / ${formatMoney(budget, currencySymbol(config))}` : null,
     icon: ICONS.cost,
     color: COLORS.cost,
     detailKind: "grid",
-    entityId: entity,
+    entityId: importEntity,
+  };
+}
+
+function costCard(config, hass, model) {
+  const todayCard = costTodayCard(config, hass);
+  return {
+    kind: "cost",
+    label: model.cost.displayStatus.toUpperCase(),
+    status: "Hourly",
+    value: model.cost.valueLabel,
+    secondaryStatus: "Today",
+    secondaryValue: todayCard.value,
+    progress: todayCard.progress,
+    progressColor: todayCard.progressColor,
+    progressLabel: todayCard.progressLabel,
+    icon: ICONS.cost,
+    color: COLORS.cost,
+    detailKind: "grid",
+    entityId: todayCard.entityId,
   };
 }
 
@@ -460,8 +497,8 @@ function batteryReserveCard(model) {
   const reserveHours = remaining !== null && loadKw > 0.025 ? remaining / loadKw : null;
   return {
     kind: "battery_reserve",
-    label: "Battery Reserve",
-    status: "Reserve",
+    label: "Battery",
+    status: model.battery.displayStatus,
     value: formatHours(reserveHours),
     progress: soc,
     icon: ICONS.battery,
@@ -679,9 +716,10 @@ function buildActions(config, hass) {
 
 function predefinedBottomCard(type, model, config, hass) {
   const normalisedType = {
-    cost: "cost_now",
-    current_cost: "cost_now",
-    budget: "cost_today",
+    current_cost: "cost",
+    budget: "cost",
+    cost_now: "cost",
+    cost_today: "cost",
     self_powered: "self_powered_today",
     grid_energy: "grid_import_export",
   }[type] || type;
@@ -695,16 +733,7 @@ function predefinedBottomCard(type, model, config, hass) {
       icon: ICONS.grid,
       color: COLORS.grid,
     },
-    cost_now: {
-      kind: "cost",
-      label: "Grid cost",
-      status: model.cost.displayStatus,
-      value: model.cost.valueLabel,
-      icon: ICONS.cost,
-      color: COLORS.cost,
-      detailKind: "grid",
-    },
-    cost_today: costTodayCard(config, hass),
+    cost: costCard(config, hass, model),
     self_powered_today: selfPoweredTodayCard(config, hass),
     grid_import_export: gridImportExportCard(config, hass),
     battery_reserve: model.visible.battery ? batteryReserveCard(model) : null,
@@ -839,7 +868,8 @@ function buildDetailGroups(config, hass, model, energyToday) {
       detailRow("Grid power", model.grid.powerLabel, model.entities.grid_power),
       detailRow("Status", model.grid.displayStatus),
       detailRow("Current cost", model.cost.valueLabel),
-      detailRow(model.cost.rate === null ? null : `${model.cost.displayStatus} rate`, model.cost.rate === null ? null : `${model.cost.rate}/kWh`),
+      detailRow("Import rate", model.cost.importRate === null ? null : `${model.cost.importRate}/kWh`),
+      detailRow("Export rate", model.cost.exportRate === null ? null : `${model.cost.exportRate}/kWh`),
       detailRow("Energy today", model.energyToday.grid, energyToday.grid),
       ...configuredDetailRows(config, hass, "grid"),
     ].filter(Boolean),
@@ -1403,9 +1433,9 @@ class HacsHomeEnergyCard extends LitElement {
       min-width: 0;
       display: grid;
       grid-template-columns: auto 1fr;
-      gap: 10px;
+      gap: 8px;
       align-items: center;
-      padding: 10px 12px;
+      padding: 8px 10px;
       border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, .17);
       background: rgba(5, 14, 20, .66);
@@ -1416,8 +1446,8 @@ class HacsHomeEnergyCard extends LitElement {
     }
 
     .pill ha-icon {
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       color: var(--pill-color, var(--energy-card-accent));
       filter: drop-shadow(0 0 12px color-mix(in srgb, var(--pill-color, #58d5ff), transparent 35%));
     }
@@ -1433,6 +1463,17 @@ class HacsHomeEnergyCard extends LitElement {
       margin-top: 3px;
       display: grid;
       gap: 1px;
+      min-width: 0;
+    }
+
+    .pill-main-dual {
+      grid-template-columns: auto auto;
+      column-gap: 8px;
+    }
+
+    .pill-data {
+      display: grid;
+      gap: inherit;
       min-width: 0;
     }
 
@@ -1467,8 +1508,8 @@ class HacsHomeEnergyCard extends LitElement {
       width: var(--pill-progress, 0%);
       height: 100%;
       border-radius: inherit;
-      background: var(--pill-color, var(--energy-card-accent));
-      box-shadow: 0 0 12px color-mix(in srgb, var(--pill-color, #58d5ff), transparent 30%);
+      background: var(--pill-progress-color, var(--pill-color, var(--energy-card-accent)));
+      box-shadow: 0 0 12px color-mix(in srgb, var(--pill-progress-color, var(--pill-color, #58d5ff)), transparent 30%);
     }
 
     .detail-backdrop {
@@ -2107,12 +2148,20 @@ class HacsHomeEnergyCard extends LitElement {
         <ha-icon icon=${card.icon || ICONS.entity}></ha-icon>
         <span>
           <span class="pill-label">${card.label}</span>
-          <span class="pill-main">
-            <span class="pill-status">${card.status}</span>
-            <span class="pill-value">${card.value}</span>
+          <span class="pill-main ${card.secondaryValue !== undefined ? 'pill-main-dual' : ''}">
+            <span class="pill-data">
+              <span class="pill-status">${card.status}</span>
+              <span class="pill-value">${card.value}</span>
+            </span>
+            ${card.secondaryValue !== undefined
+              ? html`<span class="pill-data">
+                  <span class="pill-status">${card.secondaryStatus}</span>
+                  <span class="pill-value">${card.secondaryValue}</span>
+                </span>`
+              : html``}
           </span>
           ${card.progress !== null && card.progress !== undefined
-            ? html`<span class="pill-progress" title=${card.progressLabel || `${card.progress}%`}><span style=${`--pill-progress:${card.progress}%`}></span></span>`
+            ? html`<span class="pill-progress" title=${card.progressLabel || `${card.progress}%`}><span style=${`--pill-progress:${card.progress}%; --pill-progress-color:${card.progressColor || 'var(--pill-color)'}`}></span></span>`
             : html``}
         </span>
       </button>
@@ -2264,8 +2313,8 @@ const EDITOR_FIELD_DEFS = [
     default: "auto",
     deleteWhen: "auto",
   },
-  { name: "solar_capacity_kw", label: "Solar Capacity kW", path: ["solar_capacity_kw"], selector: { number: { min: 0, step: 0.1, mode: "box" } } },
-  { name: "battery_capacity_kwh", label: "Battery Capacity kWh", path: ["battery_capacity_kwh"], selector: { number: { min: 0, step: 0.1, mode: "box" } } },
+  { name: "solar_capacity_kw", label: "Solar Capacity (Fixed kW)", path: ["solar_capacity_kw"], selector: { number: { min: 0, step: 0.1, mode: "box" } } },
+  { name: "battery_capacity_kwh", label: "Battery Capacity (Fixed kWh)", path: ["battery_capacity_kwh"], selector: { number: { min: 0, step: 0.1, mode: "box" } } },
   { name: "card_width", label: "Card Width px", path: ["card_width"], selector: { number: { min: 320, step: 1, mode: "box" } } },
   { name: "card_height", label: "Card Height px", path: ["card_height"], selector: { number: { min: 180, step: 1, mode: "box" } } },
   { name: "grid_label", label: "Grid Label", path: ["labels", "grid"], selector: { text: {} } },
@@ -2279,10 +2328,10 @@ const EDITOR_FIELD_DEFS = [
   { name: "grid_power", label: "Grid Import Export Power", path: ["entities", "grid_power"], selector: { entity: { domain: "sensor" } } },
   { name: "house_power", label: "Home Power Usage", path: ["entities", "house_power"], selector: { entity: { domain: "sensor" } } },
   { name: "solar_power", label: "Solar Producing Power", path: ["entities", "solar_power"], selector: { entity: { domain: "sensor" } } },
-  { name: "solar_capacity", label: "Solar Capacity Entity", path: ["entities", "solar_capacity"], selector: { entity: { domain: "sensor" } } },
+  { name: "solar_capacity", label: "Solar Capacity (Sensor Override)", path: ["entities", "solar_capacity"], selector: { entity: { domain: "sensor" } } },
   { name: "battery_power", label: "Battery Charge Discharge Power", path: ["entities", "battery_power"], selector: { entity: { domain: "sensor" } } },
   { name: "battery_soc", label: "Battery State Of Charge", path: ["entities", "battery_soc"], selector: { entity: { domain: "sensor" } } },
-  { name: "battery_capacity", label: "Battery Capacity Entity", path: ["entities", "battery_capacity"], selector: { entity: { domain: "sensor" } } },
+  { name: "battery_capacity", label: "Battery Capacity (Sensor Override)", path: ["entities", "battery_capacity"], selector: { entity: { domain: "sensor" } } },
   { name: "ev_power", label: "EV Charge Power", path: ["entities", "ev_power"], selector: { entity: { domain: "sensor" } } },
   { name: "ev_soc", label: "EV State Of Charge", path: ["entities", "ev_soc"], selector: { entity: { domain: "sensor" } } },
   { name: "ev_charging_state", label: "EV Charging State", path: ["entities", "ev_charging_state"], selector: { entity: { domain: ["binary_sensor", "sensor"] } } },
@@ -2297,12 +2346,13 @@ const EDITOR_FIELD_DEFS = [
   { name: "solar_node_extra", label: "Solar Node Extra", path: ["node_info", "solar", "entity"], selector: { entity: { domain: "sensor" } } },
   { name: "ev_node_extra", label: "EV Node Extra", path: ["node_info", "ev", "entity"], selector: { entity: { domain: "sensor" } } },
   { name: "battery_node_extra", label: "Battery Node Extra", path: ["node_info", "battery", "entity"], selector: { entity: { domain: "sensor" } } },
-  { name: "import_rate", label: "Import Rate", path: ["tariffs", "import_rate"], selector: { number: { min: 0, step: 0.001, mode: "box" } } },
-  { name: "export_rate", label: "Export Rate", path: ["tariffs", "export_rate"], selector: { number: { min: 0, step: 0.001, mode: "box" } } },
-  { name: "import_rate_entity", label: "Import Rate Entity", path: ["tariffs", "import_rate_entity"], selector: { entity: { domain: "sensor" } } },
-  { name: "export_rate_entity", label: "Export Rate Entity", path: ["tariffs", "export_rate_entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "import_rate", label: "Import Rate (Fixed Price)", path: ["tariffs", "import_rate"], selector: { number: { min: 0, step: 0.001, mode: "box" } } },
+  { name: "export_rate", label: "Export Rate (Fixed Price)", path: ["tariffs", "export_rate"], selector: { number: { min: 0, step: 0.001, mode: "box" } } },
+  { name: "import_rate_entity", label: "Import Rate (Sensor Override)", path: ["tariffs", "import_rate_entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "export_rate_entity", label: "Export Rate (Sensor Override)", path: ["tariffs", "export_rate_entity"], selector: { entity: { domain: "sensor" } } },
   { name: "currency", label: "Currency", path: ["tariffs", "currency"], selector: { text: {} } },
-  { name: "cost_today_entity", label: "Cost Today Entity", path: ["costs", "today_entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "cost_today_entity", label: "Cost Today Entity (Import)", path: ["costs", "today_entity"], selector: { entity: { domain: "sensor" } } },
+  { name: "cost_export_today_entity", label: "Cost Today Entity (Export)", path: ["costs", "export_today_entity"], selector: { entity: { domain: "sensor" } } },
   { name: "cost_daily_budget", label: "Daily Cost Budget", path: ["costs", "daily_budget"], selector: { number: { min: 0, step: 0.01, mode: "box" } } },
   { name: "solar_pv_voltage", label: "Solar PV Voltage", path: ["detail_entities", "solar", "pv_voltage"], selector: { entity: { domain: "sensor" } } },
   { name: "solar_pv_current", label: "Solar PV Current", path: ["detail_entities", "solar", "pv_current"], selector: { entity: { domain: "sensor" } } },
@@ -2332,8 +2382,7 @@ const EDITOR_FIELD_DEFS = [
         mode: "dropdown",
         options: [
           { value: "none", label: "None" },
-          { value: "cost_today", label: "Cost Today" },
-          { value: "cost_now", label: "Cost Now" },
+          { value: "cost", label: "Cost (Now & Today)" },
           { value: "self_powered_today", label: "Self Powered Today" },
           { value: "grid_import_export", label: "Grid Import Export" },
           { value: "battery_reserve", label: "Battery Reserve" },
@@ -2343,7 +2392,7 @@ const EDITOR_FIELD_DEFS = [
         ],
       },
     },
-    default: index === 0 ? "cost_today" : index === 1 ? "self_powered_today" : index === 2 ? "grid_import_export" : index === 3 ? "battery_reserve" : "sun",
+    default: index === 0 ? "cost" : index === 1 ? "self_powered_today" : index === 2 ? "grid_import_export" : index === 3 ? "battery_reserve" : "sun",
   })),
 ];
 
@@ -2366,40 +2415,31 @@ const EDITOR_SECTION_GROUPS = [
     ],
   },
   {
-    label: "Grid And Home",
-    fields: [
-      "sun",
-      "weather",
-      "outdoor_temperature",
-      "grid_label",
-      "house_label",
-      "grid_power",
-      "house_power",
-      "grid_energy_today",
-      "grid_import_today",
-      "grid_export_today",
-      "home_energy_today",
-      "grid_node_extra",
-      "home_node_extra",
-      "grid_import_24h",
-      "grid_export_24h",
-      "home_energy_24h",
-    ],
+    label: "Environment",
+    fields: ["sun", "weather", "outdoor_temperature"],
+  },
+  {
+    label: "Home",
+    fields: ["house_label", "house_power", "home_energy_today", "home_energy_24h", "home_node_extra"],
+  },
+  {
+    label: "Grid",
+    fields: ["grid_label", "grid_power", "grid_energy_today", "grid_import_today", "grid_export_today", "grid_import_24h", "grid_export_24h", "grid_node_extra"],
   },
   {
     label: "Solar",
     fields: [
       "solar_label",
       "solar_capacity_kw",
-      "solar_power",
       "solar_capacity",
+      "solar_power",
       "solar_energy_today",
-      "solar_node_extra",
-      "solar_pv_voltage",
-      "solar_pv_current",
       "solar_energy_24h",
       "solar_energy_week",
       "solar_energy_month",
+      "solar_pv_voltage",
+      "solar_pv_current",
+      "solar_node_extra",
     ],
   },
   {
@@ -2409,14 +2449,14 @@ const EDITOR_SECTION_GROUPS = [
       "ev_power",
       "ev_soc",
       "ev_charging_state",
-      "ev_node_extra",
+      "ev_energy_24h",
+      "ev_energy_week",
       "ev_range",
       "ev_inside_temperature",
       "ev_odometer",
-      "ev_energy_24h",
-      "ev_energy_week",
       "ev_lock",
       "ev_boost",
+      "ev_node_extra",
     ],
   },
   {
@@ -2424,20 +2464,29 @@ const EDITOR_SECTION_GROUPS = [
     fields: [
       "battery_label",
       "battery_capacity_kwh",
+      "battery_capacity",
       "battery_power",
       "battery_soc",
-      "battery_capacity",
-      "battery_node_extra",
+      "battery_charge_24h",
+      "battery_discharge_24h",
       "battery_discharge_today",
       "battery_voltage",
       "battery_current",
-      "battery_charge_24h",
-      "battery_discharge_24h",
+      "battery_node_extra",
     ],
   },
   {
     label: "Cost",
-    fields: ["import_rate", "export_rate", "import_rate_entity", "export_rate_entity", "currency", "cost_today_entity", "cost_daily_budget"],
+    fields: [
+      "currency",
+      "import_rate",
+      "import_rate_entity",
+      "export_rate",
+      "export_rate_entity",
+      "cost_today_entity",
+      "cost_export_today_entity",
+      "cost_daily_budget",
+    ],
   },
   {
     label: "Bottom Bar",
